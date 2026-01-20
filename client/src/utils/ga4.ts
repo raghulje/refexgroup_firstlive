@@ -24,6 +24,9 @@ export const initGA4 = () => {
       
       // Set up global click tracking
       setupGlobalClickTracking();
+      
+      // Set up scroll depth tracking
+      setupScrollDepthTracking();
     } catch (error) {
       console.error('❌ GA4 initialization failed:', error);
     }
@@ -173,6 +176,186 @@ export const trackDownload = (fileName: string, fileUrl: string) => {
       console.error('❌ GA4 download tracking failed:', error);
     }
   }
+};
+
+/**
+ * Track tab switches
+ * @param tabName - Name of the tab
+ * @param tabLocation - Where the tab is located (page/section)
+ */
+export const trackTabSwitch = (tabName: string, tabLocation?: string) => {
+  if (typeof window !== 'undefined' && isInitialized) {
+    try {
+      trackEvent('tab_switch', {
+        tab_name: tabName,
+        tab_location: tabLocation || window.location.pathname,
+        page_path: window.location.pathname,
+      });
+    } catch (error) {
+      console.error('❌ GA4 tab switch tracking failed:', error);
+    }
+  }
+};
+
+/**
+ * Track modal opens
+ * @param modalName - Name/type of the modal
+ * @param modalContent - Optional content identifier (e.g., leader name, project name)
+ * @param modalLocation - Where the modal was opened from
+ */
+export const trackModalOpen = (modalName: string, modalContent?: string, modalLocation?: string) => {
+  if (typeof window !== 'undefined' && isInitialized) {
+    try {
+      trackEvent('modal_open', {
+        modal_name: modalName,
+        modal_content: modalContent || '',
+        modal_location: modalLocation || window.location.pathname,
+        page_path: window.location.pathname,
+      });
+    } catch (error) {
+      console.error('❌ GA4 modal open tracking failed:', error);
+    }
+  }
+};
+
+/**
+ * Track modal closes
+ * @param modalName - Name/type of the modal
+ * @param modalContent - Optional content identifier
+ * @param timeSpent - Optional time spent in modal (seconds)
+ */
+export const trackModalClose = (modalName: string, modalContent?: string, timeSpent?: number) => {
+  if (typeof window !== 'undefined' && isInitialized) {
+    try {
+      trackEvent('modal_close', {
+        modal_name: modalName,
+        modal_content: modalContent || '',
+        time_spent: timeSpent || 0,
+        page_path: window.location.pathname,
+      });
+    } catch (error) {
+      console.error('❌ GA4 modal close tracking failed:', error);
+    }
+  }
+};
+
+/**
+ * Track scroll depth
+ * @param depth - Percentage of page scrolled (25, 50, 75, 100)
+ */
+export const trackScrollDepth = (depth: number) => {
+  if (typeof window !== 'undefined' && isInitialized) {
+    try {
+      trackEvent('scroll_depth', {
+        scroll_depth: depth,
+        page_path: window.location.pathname,
+      });
+    } catch (error) {
+      console.error('❌ GA4 scroll depth tracking failed:', error);
+    }
+  }
+};
+
+/**
+ * Track image gallery/lightbox interactions
+ * @param action - Action type (open, close, navigate_next, navigate_prev, fullscreen, share)
+ * @param galleryName - Name of the gallery
+ * @param imageIndex - Current image index (if applicable)
+ * @param imageTotal - Total number of images (if applicable)
+ */
+export const trackGalleryInteraction = (
+  action: 'open' | 'close' | 'navigate_next' | 'navigate_prev' | 'fullscreen' | 'share',
+  galleryName: string,
+  imageIndex?: number,
+  imageTotal?: number
+) => {
+  if (typeof window !== 'undefined' && isInitialized) {
+    try {
+      trackEvent('gallery_interaction', {
+        action: action,
+        gallery_name: galleryName,
+        image_index: imageIndex || 0,
+        image_total: imageTotal || 0,
+        page_path: window.location.pathname,
+      });
+    } catch (error) {
+      console.error('❌ GA4 gallery interaction tracking failed:', error);
+    }
+  }
+};
+
+/**
+ * Track business card/grid interactions
+ * @param businessName - Name of the business
+ * @param interactionType - Type of interaction (click, hover, explore)
+ * @param location - Where the interaction occurred
+ */
+export const trackBusinessInteraction = (
+  businessName: string,
+  interactionType: 'click' | 'hover' | 'explore',
+  location?: string
+) => {
+  if (typeof window !== 'undefined' && isInitialized) {
+    try {
+      trackEvent('business_interaction', {
+        business_name: businessName,
+        interaction_type: interactionType,
+        location: location || window.location.pathname,
+        page_path: window.location.pathname,
+      });
+    } catch (error) {
+      console.error('❌ GA4 business interaction tracking failed:', error);
+    }
+  }
+};
+
+/**
+ * Set up scroll depth tracking
+ * Tracks when user scrolls 25%, 50%, 75%, and 100% of the page
+ */
+export const setupScrollDepthTracking = () => {
+  if (typeof window === 'undefined' || !isInitialized) return;
+
+  const trackedDepths = new Set<number>();
+  const depths = [25, 50, 75, 100];
+
+  const handleScroll = () => {
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollPercent = Math.round(((scrollTop + windowHeight) / documentHeight) * 100);
+
+    depths.forEach((depth) => {
+      if (scrollPercent >= depth && !trackedDepths.has(depth)) {
+        trackedDepths.add(depth);
+        trackScrollDepth(depth);
+      }
+    });
+
+    // Reset tracking when user scrolls back to top
+    if (scrollPercent < 25) {
+      trackedDepths.clear();
+    }
+  };
+
+  // Throttle scroll events
+  let ticking = false;
+  const throttledScroll = () => {
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        handleScroll();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  };
+
+  window.addEventListener('scroll', throttledScroll, { passive: true });
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('scroll', throttledScroll);
+  };
 };
 
 /**

@@ -1,3 +1,5 @@
+import { trackButtonClick } from '../../../utils/ga4';
+
 interface CTASectionProps {
   section?: any;
   getSectionContent?: (section: any, contentKey: string) => any;
@@ -54,9 +56,13 @@ export default function CTASection({ section, getSectionContent, getImagePath }:
           href={buttonLink}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackButtonClick(buttonText, 'renewables-page-cta', buttonLink)}
           className="cta-button-fill-renewables inline-flex items-center gap-2 bg-black text-white px-8 py-3 rounded-full font-semibold transition-all duration-300 whitespace-nowrap cursor-pointer relative overflow-hidden group"
           data-aos="fade-up"
           data-aos-delay="200"
+          data-ga-track="button"
+          data-ga-label={buttonText}
+          data-ga-location="renewables-page-cta"
         >
           <span className="relative z-10 flex items-center gap-2">
             {buttonText}

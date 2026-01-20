@@ -4,6 +4,7 @@ import 'aos/dist/aos.css';
 import MainLayout from '../../components/feature/MainLayout';
 import Footer from '../../components/feature/Footer';
 import { pagesService, sectionsService } from '../../services/apiService';
+import { trackTabSwitch, trackButtonClick } from '../../utils/ga4';
 
 // Import SVG icons
 import StateOfArtIcon from '../svg/refrigerants/state_of_art.svg?react';
@@ -464,6 +465,7 @@ export default function RefexRefrigerantsPage() {
                     className="tab-button-refrigerants tab-button-active flex items-center gap-2 text-white px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 rounded-full text-sm sm:text-base font-medium transition-all whitespace-normal sm:whitespace-nowrap cursor-pointer shadow-md relative overflow-hidden group"
                     style={{ backgroundColor: tabButtonColor }}
                     onClick={(e) => {
+                      trackTabSwitch(tab1Label || 'Product Quality', 'refrigerants-page');
                       // Hide all tab contents on desktop
                       document.querySelectorAll('.tab-content').forEach(el => {
                         if (window.innerWidth >= 768) {
@@ -493,6 +495,9 @@ export default function RefexRefrigerantsPage() {
                       e.currentTarget.style.backgroundColor = tabButtonColor;
                       e.currentTarget.style.color = 'white';
                     }}
+                    data-ga-track="button"
+                    data-ga-label={`${tab1Label} Tab`}
+                    data-ga-location="refrigerants-page"
                   >
                     <span className="relative z-10 flex items-center gap-2">
                       {tab1IconPath ? (
@@ -518,6 +523,7 @@ export default function RefexRefrigerantsPage() {
                   <button
                     className="tab-button-refrigerants tab-button-inactive flex items-center gap-2 bg-white text-[#2a78b2] px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 rounded-full text-sm sm:text-base font-medium transition-all whitespace-normal sm:whitespace-nowrap cursor-pointer shadow-sm relative overflow-hidden group"
                     onClick={(e) => {
+                      trackTabSwitch(tab2Label || 'Product Safety', 'refrigerants-page');
                       // Hide all tab contents on desktop
                       document.querySelectorAll('.tab-content').forEach(el => {
                         if (window.innerWidth >= 768) {
@@ -547,6 +553,9 @@ export default function RefexRefrigerantsPage() {
                       e.currentTarget.style.backgroundColor = tabButtonColor;
                       e.currentTarget.style.color = 'white';
                     }}
+                    data-ga-track="button"
+                    data-ga-label={`${tab2Label} Tab`}
+                    data-ga-location="refrigerants-page"
                   >
                     <span className="relative z-10 flex items-center gap-2">
                       {tab2IconPath ? (
@@ -803,8 +812,12 @@ export default function RefexRefrigerantsPage() {
                 href={buttonLink}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackButtonClick(buttonText, 'refrigerants-page-cta', buttonLink)}
                 className="cta-button-fill-refrigerants inline-flex items-center justify-center bg-white text-[#0066cc] border-2 border-white px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 rounded-full font-semibold transition-all duration-300 whitespace-normal sm:whitespace-nowrap cursor-pointer relative overflow-hidden group text-sm sm:text-base"
                 data-aos="zoom-in"
+                data-ga-track="button"
+                data-ga-label={buttonText}
+                data-ga-location="refrigerants-page-cta"
               >
                 <span className="relative z-10 flex items-center justify-center">
                   {buttonText}

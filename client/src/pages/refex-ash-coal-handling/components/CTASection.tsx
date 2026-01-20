@@ -1,3 +1,5 @@
+import { trackButtonClick } from '../../../utils/ga4';
+
 interface CTASectionProps {
   sectionData?: any;
   getImagePath?: (imageData: any) => string;
@@ -55,9 +57,13 @@ export default function CTASection({ sectionData, getImagePath, getSectionConten
         {linkType === 'internal' ? (
           <a
             href={getButtonLink()}
+            onClick={() => trackButtonClick(buttonText, 'ash-coal-page-cta', getButtonLink())}
             className="cta-button-fill-ash-coal inline-flex items-center gap-2 bg-white text-gray-900 px-8 py-3 rounded-full font-semibold transition-all duration-300 shadow-lg hover:shadow-xl relative overflow-hidden group"
             data-aos="fade-up"
             data-aos-delay="200"
+            data-ga-track="button"
+            data-ga-label={buttonText}
+            data-ga-location="ash-coal-page-cta"
           >
             <span className="relative z-10 flex items-center gap-2">
               {buttonText}
@@ -69,9 +75,13 @@ export default function CTASection({ sectionData, getImagePath, getSectionConten
             href={getButtonLink()}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackButtonClick(buttonText, 'ash-coal-page-cta', getButtonLink())}
             className="cta-button-fill-ash-coal inline-flex items-center gap-2 bg-white text-gray-900 px-8 py-3 rounded-full font-semibold transition-all duration-300 shadow-lg hover:shadow-xl relative overflow-hidden group"
             data-aos="fade-up"
             data-aos-delay="200"
+            data-ga-track="button"
+            data-ga-label={buttonText}
+            data-ga-location="ash-coal-page-cta"
           >
             <span className="relative z-10 flex items-center gap-2">
               {buttonText}

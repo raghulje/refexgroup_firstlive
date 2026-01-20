@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { trackButtonClick } from '../../../utils/ga4';
 
 interface CTASectionProps {
   sectionData?: any;
@@ -34,7 +35,11 @@ export default function CTASection({ sectionData: _sectionData, cards = [], getS
                 <h3 className="text-sm md:text-base font-bold text-white mb-[13.6px]">{card.title}</h3>
                 <Link
                   to={card.buttonLink || '#'}
+                  onClick={() => trackButtonClick(card.buttonText, 'diversity-page-cta', card.buttonLink)}
                   className="inline-block border-2 border-white bg-transparent text-white px-6 py-[8.5px] rounded-full font-semibold hover:bg-white hover:text-black hover:-translate-y-2 transition-all duration-500 ease-out whitespace-nowrap cursor-pointer text-sm md:text-base"
+                  data-ga-track="button"
+                  data-ga-label={card.buttonText}
+                  data-ga-location="diversity-page-cta"
                 >
                   {card.buttonText}
                 </Link>

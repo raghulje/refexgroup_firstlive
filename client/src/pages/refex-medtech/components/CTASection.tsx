@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { trackButtonClick } from '../../../utils/ga4';
 
 const CTASection = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -41,9 +42,13 @@ const CTASection = () => {
           href="https://3imedtech.com/"
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => trackButtonClick('Visit Website', 'medtech-page-cta', 'https://3imedtech.com/')}
           className="inline-block bg-white text-[#4a90a4] px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-all duration-300 whitespace-nowrap cursor-pointer"
           data-aos="fade-up"
           data-aos-delay="200"
+          data-ga-track="button"
+          data-ga-label="Visit Website"
+          data-ga-location="medtech-page-cta"
         >
           Visit Website
         </a>

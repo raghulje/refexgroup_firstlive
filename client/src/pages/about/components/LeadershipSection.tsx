@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ScrollRevealSection from '../../../components/base/ScrollRevealSection';
 import ProfileCard from './ProfileCard';
 import { leadersService } from '../../../services/apiService';
 import { getApiBaseUrl } from '../../../config/env';
 import LeadershipPhotoBg from '../../../wp-content/uploads/2023/02/Leadership-Photo-BG.png';
+import { trackModalOpen, trackModalClose, trackLinkClick } from '../../../utils/ga4';
 
 interface Leader {
   id?: number;
@@ -328,6 +329,7 @@ export default function LeadershipSection() {
   const [leaders, setLeaders] = useState<Leader[]>(fallbackLeaders);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const modalOpenTime = useRef<number>(0);
 
   useEffect(() => {
     const fetchLeaders = async () => {
@@ -490,7 +492,11 @@ export default function LeadershipSection() {
                   title={leader.title}
                   image={leader.image}
 
-                  onReadMore={() => setSelectedLeader(leader)}
+                  onReadMore={() => {
+                    setSelectedLeader(leader);
+                    modalOpenTime.current = Date.now();
+                    trackModalOpen('leadership_profile', leader.name, 'about-page');
+                  }}
                 />
 
                 // <div
@@ -561,7 +567,11 @@ export default function LeadershipSection() {
       {selectedLeader && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4 animate-fadeIn"
-          onClick={() => setSelectedLeader(null)}
+          onClick={() => {
+            const timeSpent = Math.round((Date.now() - modalOpenTime.current) / 1000);
+            trackModalClose('leadership_profile', selectedLeader.name, timeSpent);
+            setSelectedLeader(null);
+          }}
         >
           <div
             className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar animate-slideUp p-8 md:p-12"
@@ -569,7 +579,11 @@ export default function LeadershipSection() {
           >
             {/* Close Button */}
             <button
-              onClick={() => setSelectedLeader(null)}
+              onClick={() => {
+                const timeSpent = Math.round((Date.now() - modalOpenTime.current) / 1000);
+                trackModalClose('leadership_profile', selectedLeader.name, timeSpent);
+                setSelectedLeader(null);
+              }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
               aria-label="Close modal"
             >
@@ -625,7 +639,10 @@ export default function LeadershipSection() {
                     href={selectedLeader.linkedinUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackLinkClick(`${selectedLeader.name} LinkedIn`, selectedLeader.linkedinUrl!, 'external')}
                     className="inline-flex items-center justify-center text-[#0a66c2] hover:text-[#004182] transition-colors"
+                    data-ga-track="link"
+                    data-ga-label={`${selectedLeader.name} LinkedIn`}
                   >
                     <i className="ri-linkedin-box-fill text-3xl"></i>
                   </a>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import React from 'react';
+import { trackButtonClick } from '../../../utils/ga4';
 
 interface CTASectionProps {
   sectionData?: any;
@@ -63,9 +64,13 @@ export const CTASection: React.FC<CTASectionProps> = ({ sectionData, getImagePat
             href={buttonLink}
             target={buttonLink.startsWith('http') ? '_blank' : undefined}
             rel={buttonLink.startsWith('http') ? 'noopener noreferrer' : undefined}
+            onClick={() => trackButtonClick(buttonText, 'mobility-page-cta', buttonLink)}
             className="inline-flex items-center gap-2 bg-white text-black px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 cursor-pointer whitespace-nowrap"
             data-aos="fade-in"
             data-aos-delay="300"
+            data-ga-track="button"
+            data-ga-label={buttonText}
+            data-ga-location="mobility-page-cta"
           >
             {buttonText}
           </a>

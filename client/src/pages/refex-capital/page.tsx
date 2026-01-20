@@ -4,6 +4,7 @@ import 'aos/dist/aos.css';
 import MainLayout from '../../components/feature/MainLayout';
 import Footer from '../../components/feature/Footer';
 import { pagesService, sectionsService } from '../../services/apiService';
+import { trackButtonClick, trackLinkClick } from '../../utils/ga4';
 
 // Import SVG icons
 import HealthcareIcon from '../svg/refex_capital/healthcare.svg?react';
@@ -799,7 +800,16 @@ export default function RefexCapitalPage() {
                   if (!logoUrl) return null;
 
                   return (
-                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 md:p-6 lg:p-8 flex items-center justify-center hover:shadow-lg transition-all duration-300 hover:border-gray-300 min-h-[160px] md:min-h-[180px] lg:min-h-[200px]">
+                    <div 
+                      key={index} 
+                      onClick={() => {
+                        const portfolioName = typeof logo === 'string' ? `Portfolio Company ${index + 1}` : (logo?.name || `Portfolio Company ${index + 1}`);
+                        trackLinkClick(portfolioName, '#', 'internal');
+                      }}
+                      className="bg-white border border-gray-200 rounded-lg p-4 md:p-6 lg:p-8 flex items-center justify-center hover:shadow-lg transition-all duration-300 hover:border-gray-300 min-h-[160px] md:min-h-[180px] lg:min-h-[200px] cursor-pointer"
+                      data-ga-track="link"
+                      data-ga-label={`Portfolio Logo ${index + 1}`}
+                    >
                       <img
                         src={logoUrl}
                         alt={`Portfolio ${index + 1}`}
@@ -843,7 +853,11 @@ export default function RefexCapitalPage() {
                       href={ctaButtonLink}
                       target={isExternalLink ? '_blank' : undefined}
                       rel={isExternalLink ? 'noopener noreferrer' : undefined}
+                      onClick={() => trackButtonClick(ctaButtonText, 'capital-page-cta', ctaButtonLink)}
                       className="inline-flex items-center justify-center bg-[#7dc144] text-white px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 rounded-full font-semibold hover:bg-[#6fb03a] transition-all duration-300 whitespace-normal sm:whitespace-nowrap cursor-pointer text-sm sm:text-base"
+                      data-ga-track="button"
+                      data-ga-label={ctaButtonText}
+                      data-ga-location="capital-page-cta"
                     >
                       {ctaButtonText}
                       <i className="ri-arrow-right-line ml-2 text-white"></i>

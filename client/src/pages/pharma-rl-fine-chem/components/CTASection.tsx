@@ -1,3 +1,4 @@
+import { trackButtonClick } from '../../../utils/ga4';
 import CTABg from '../../../wp-content/uploads/2024/01/CTA-BG.jpg';
 
 interface CTASectionProps {
@@ -59,7 +60,11 @@ export default function CTASection({ sectionData, getImagePath, getSectionConten
             href={buttonLink}
             target={buttonLink.startsWith('http') ? '_blank' : undefined}
             rel={buttonLink.startsWith('http') ? 'noopener noreferrer' : undefined}
+            onClick={() => trackButtonClick(buttonText, 'pharma-page-cta', buttonLink)}
             className="cta-button-fluid inline-flex items-center gap-2 bg-white text-[#3b9dd6] px-8 py-3 rounded-full font-semibold whitespace-nowrap cursor-pointer border-2 border-white text-sm relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105"
+            data-ga-track="button"
+            data-ga-label={buttonText}
+            data-ga-location="pharma-page-cta"
           >
             <span className="relative z-10 flex items-center gap-2">
             {buttonText}

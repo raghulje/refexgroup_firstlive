@@ -6,6 +6,7 @@ import MainLayout from '../../components/feature/MainLayout';
 // All images must come from CMS - no static imports
 import { pagesService, sectionsService, businessCardsService } from '../../services/apiService';
 import { getApiBaseUrl } from '../../config/env';
+import { trackBusinessInteraction, trackButtonClick, trackLinkClick } from '../../utils/ga4';
 
 // No fallback businesses - all must come from CMS
 const fallbackBusinesses: any[] = [];
@@ -207,7 +208,11 @@ export default function BusinessPage() {
                 key={business.id}
                 className={`relative cursor-pointer transition-all duration-500 ease-in-out overflow-hidden rounded-lg ${activeIndex === index ? 'flex-[3]' : 'flex-1'
                   }`}
-                onMouseEnter={() => setActiveIndex(index)}
+                onMouseEnter={() => {
+                  setActiveIndex(index);
+                  trackBusinessInteraction(business.title, 'hover', 'business-page-accordion');
+                }}
+                onClick={() => trackBusinessInteraction(business.title, 'click', 'business-page-accordion')}
                 style={{
                   backgroundImage: business.image ? `url(${business.image})` : 'none',
                   backgroundSize: 'cover',
@@ -229,7 +234,13 @@ export default function BusinessPage() {
                       <p className="text-gray-200 text-sm mb-4">{business.description}</p>
                       <Link
                         to={business.link}
+                        onClick={() => {
+                          trackBusinessInteraction(business.title, 'explore', 'business-page-accordion');
+                          trackLinkClick(`Learn More - ${business.title}`, business.link, 'internal');
+                        }}
                         className="inline-flex items-center text-[#50b848] hover:text-[#3d8c36] font-medium"
+                        data-ga-track="link"
+                        data-ga-label={`Learn More - ${business.title}`}
                       >
                         Learn More <i className="ri-arrow-right-line ml-2"></i>
                       </Link>
@@ -265,10 +276,16 @@ export default function BusinessPage() {
               <Link
                 key={business.id}
                 to={business.link}
+                onClick={() => {
+                  trackBusinessInteraction(business.title, 'click', 'business-page-grid');
+                  trackLinkClick(business.title, business.link, 'internal');
+                }}
                 className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
                 data-aos="fade-up"
                 data-aos-delay={index * 100}
                 data-aos-duration="800"
+                data-ga-track="link"
+                data-ga-label={business.title}
               >
                 <div className="relative h-48 overflow-hidden bg-gray-200">
                   {business.image ? (
@@ -318,10 +335,14 @@ export default function BusinessPage() {
                 </p>
                 <Link
                   to={buttonLink}
+                  onClick={() => trackButtonClick(buttonText, 'business-page-cta', buttonLink)}
                   className="inline-block bg-white text-[#50b848] px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors whitespace-nowrap"
                   data-aos="fade-up"
                   data-aos-delay="200"
                   data-aos-duration="800"
+                  data-ga-track="button"
+                  data-ga-label={buttonText}
+                  data-ga-location="business-page-cta"
                 >
                   {buttonText}
                 </Link>

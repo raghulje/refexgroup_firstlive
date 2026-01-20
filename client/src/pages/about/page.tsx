@@ -21,6 +21,7 @@ import AuthenticityIcon from '../svg/about/Authenticity.svg';
 import CustomerValueIcon from '../svg/about/CustomerValue.svg';
 import EsteemCultureIcon from '../svg/about/EsteemCulture.svg';
 import { getApiBaseUrl } from '../../config/env';
+import { trackTabSwitch, trackButtonClick } from '../../utils/ga4';
 
 // Fallback core values
 const fallbackCoreValues = [
@@ -347,6 +348,9 @@ export default function AboutPage() {
         top: offsetPosition,
         behavior: 'smooth'
       });
+      // Track tab switch
+      const sectionLabel = sections.find(s => s.id === id)?.label || id;
+      trackTabSwitch(sectionLabel, 'about-page');
     }
   };
 
@@ -907,7 +911,11 @@ export default function AboutPage() {
                   <div className="flex flex-col items-center gap-4">
                     <Link
                       to={buttonLink}
+                      onClick={() => trackButtonClick(buttonText, 'about-page-cta', buttonLink)}
                       className="inline-flex items-center justify-center gap-2 bg-gray-800 text-white px-4 md:px-8 py-3.5 rounded-full font-semibold hover:bg-gray-700 transition-all duration-300 cursor-pointer text-sm md:text-base"
+                      data-ga-track="button"
+                      data-ga-label={buttonText}
+                      data-ga-location="about-page-cta"
                     >
                       {buttonText}
                       <i className="ri-arrow-right-line text-lg"></i>
@@ -930,7 +938,11 @@ export default function AboutPage() {
                 <h3 className="text-lg md:text-xl font-bold text-white mb-[13.6px]">Got a question?</h3>
                 <a
                   href="/contact"
+                  onClick={() => trackButtonClick('Get in touch', 'about-page-cta-section', '/contact')}
                   className="inline-block border-2 border-white bg-transparent text-white px-4 md:px-6 py-[8.5px] rounded-full font-semibold hover:bg-white hover:text-black hover:-translate-y-2 transition-all duration-500 ease-out cursor-pointer text-xs md:text-sm lg:text-base"
+                  data-ga-track="button"
+                  data-ga-label="Get in touch"
+                  data-ga-location="about-page-cta-section"
                 >
                   Get in touch
                 </a>
@@ -940,7 +952,11 @@ export default function AboutPage() {
                 <h3 className="text-lg md:text-xl font-bold text-white mb-[13.6px]">See our latest news</h3>
                 <a
                   href="/newsroom"
+                  onClick={() => trackButtonClick('Refex Newsroom', 'about-page-cta-section', '/newsroom')}
                   className="inline-block border-2 border-white bg-transparent text-white px-4 md:px-6 py-[8.5px] rounded-full font-semibold hover:bg-white hover:text-black hover:-translate-y-2 transition-all duration-500 ease-out cursor-pointer text-xs md:text-sm lg:text-base"
+                  data-ga-track="button"
+                  data-ga-label="Refex Newsroom"
+                  data-ga-location="about-page-cta-section"
                 >
                   Refex Newsroom
                 </a>
@@ -950,7 +966,11 @@ export default function AboutPage() {
                 <h3 className="text-lg md:text-xl font-bold text-white mb-[13.6px]">Work at Refex</h3>
                 <a
                   href="/careers"
+                  onClick={() => trackButtonClick('Careers', 'about-page-cta-section', '/careers')}
                   className="inline-block border-2 border-white bg-transparent text-white px-4 md:px-6 py-[8.5px] rounded-full font-semibold hover:bg-white hover:text-black hover:-translate-y-2 transition-all duration-500 ease-out cursor-pointer text-xs md:text-sm lg:text-base"
+                  data-ga-track="button"
+                  data-ga-label="Careers"
+                  data-ga-location="about-page-cta-section"
                 >
                   Careers
                 </a>

@@ -99,6 +99,9 @@ const ProfileCard = ({
           duration-300
           hover:text-[#7cb342]
         "
+        data-ga-track="button"
+        data-ga-label={`Read More - ${name}`}
+        data-ga-location="about-page-leadership"
       >
         READ MORE
       </button>

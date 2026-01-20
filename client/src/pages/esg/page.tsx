@@ -1376,11 +1376,17 @@ const ESGTabs = ({ tabsData = [] }: { tabsData?: any[] }) => {
           {tabsToUse.map((tab: any, index: number) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                setActiveTab(tab.key);
+                trackTabSwitch(tab.label || tab.key, 'esg-page-tabs');
+              }}
               className={`px-4 md:px-6 py-3 font-medium transition-all duration-300 text-xs md:text-sm rounded-full cursor-pointer ${activeTab === tab.key
                 ? 'bg-[#7DC144] text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
+              data-ga-track="button"
+              data-ga-label={`${tab.label} Tab`}
+              data-ga-location="esg-page-tabs"
             >
               {tab.label}
             </button>

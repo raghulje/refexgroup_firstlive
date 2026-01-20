@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getApiBaseUrl } from '../../../config/env';
+import { trackGalleryInteraction, trackTabSwitch } from '../../../utils/ga4';
 
 interface FeaturedProjectsProps {
   section?: any;
@@ -17,6 +18,7 @@ export default function FeaturedProjects({ section, projects = [], getImagePath 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const lightboxOpenTime = useRef<number>(0);
 
   // Handle keyboard navigation and body scroll lock
   useEffect(() => {
@@ -173,13 +175,19 @@ export default function FeaturedProjects({ section, projects = [], getImagePath 
           {displayProjects.map((project) => (
             <button
               key={project.id}
-              onClick={() => setActiveProject(project)}
+              onClick={() => {
+                setActiveProject(project);
+                trackTabSwitch(project.name || project.id, 'renewables-featured-projects');
+              }}
               data-active={activeProject.id === project.id}
               className={`project-button-fill px-4 sm:px-6 md:px-8 py-2 sm:py-3 rounded-full font-medium transition-all duration-300 whitespace-normal sm:whitespace-nowrap cursor-pointer relative overflow-hidden group text-sm sm:text-base ${
                 activeProject.id === project.id
                   ? 'bg-[#f9d71c] text-black'
                   : 'bg-white text-black'
               }`}
+              data-ga-track="button"
+              data-ga-label={`${project.name} Tab`}
+              data-ga-location="renewables-featured-projects"
             >
               <span className="relative z-10">
                 {project.name}
@@ -203,6 +211,8 @@ export default function FeaturedProjects({ section, projects = [], getImagePath 
                 onClick={() => {
                   setCurrentImageIndex(index);
                   setLightboxOpen(true);
+                  lightboxOpenTime.current = Date.now();
+                  trackGalleryInteraction('open', activeProject.name || 'featured-projects', index + 1, activeProject.images?.length || 0);
                 }}
               >
                 <img
@@ -282,22 +292,33 @@ export default function FeaturedProjects({ section, projects = [], getImagePath 
         const totalImages = allImages.length;
 
         const goToPrevious = () => {
-          setCurrentImageIndex((prev) => (prev === 0 ? totalImages - 1 : prev - 1));
+          const newIndex = currentImageIndex === 0 ? totalImages - 1 : currentImageIndex - 1;
+          setCurrentImageIndex(newIndex);
+          trackGalleryInteraction('navigate_prev', activeProject.name || 'featured-projects', newIndex + 1, totalImages);
         };
 
         const goToNext = () => {
-          setCurrentImageIndex((prev) => (prev === totalImages - 1 ? 0 : prev + 1));
+          const newIndex = currentImageIndex === totalImages - 1 ? 0 : currentImageIndex + 1;
+          setCurrentImageIndex(newIndex);
+          trackGalleryInteraction('navigate_next', activeProject.name || 'featured-projects', newIndex + 1, totalImages);
         };
 
         const handleFullscreen = () => {
           if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().then(() => setIsFullscreen(true));
+            document.documentElement.requestFullscreen().then(() => {
+              setIsFullscreen(true);
+              trackGalleryInteraction('fullscreen', activeProject.name || 'featured-projects', currentImageIndex + 1, totalImages);
+            });
           } else {
-            document.exitFullscreen().then(() => setIsFullscreen(false));
+            document.exitFullscreen().then(() => {
+              setIsFullscreen(false);
+              trackGalleryInteraction('fullscreen', activeProject.name || 'featured-projects', currentImageIndex + 1, totalImages);
+            });
           }
         };
 
         const handleShare = async () => {
+          trackGalleryInteraction('share', activeProject.name || 'featured-projects', currentImageIndex + 1, totalImages);
           if (navigator.share) {
             try {
               await navigator.share({
@@ -320,7 +341,10 @@ export default function FeaturedProjects({ section, projects = [], getImagePath 
             {/* Backdrop - closes lightbox when clicked */}
             <div 
               className="absolute inset-0 bg-black/95"
-              onClick={() => setLightboxOpen(false)}
+              onClick={() => {
+                trackGalleryInteraction('close', activeProject.name || 'featured-projects', currentImageIndex + 1, totalImages);
+                setLightboxOpen(false);
+              }}
             ></div>
             
             {/* Content Container */}
@@ -380,7 +404,10 @@ export default function FeaturedProjects({ section, projects = [], getImagePath 
                   <i className="ri-share-line text-xl"></i>
                 </button>
                 <button
-                  onClick={() => setLightboxOpen(false)}
+                  onClick={() => {
+                    trackGalleryInteraction('close', activeProject.name || 'featured-projects', currentImageIndex + 1, totalImages);
+                    setLightboxOpen(false);
+                  }}
                   className="text-white hover:text-[#ff6b35] transition-colors p-2"
                   title="Close"
                 >
@@ -400,7 +427,10 @@ export default function FeaturedProjects({ section, projects = [], getImagePath 
                   return (
                     <div
                       key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
+                      onClick={() => {
+                        setCurrentImageIndex(idx);
+                        trackGalleryInteraction('navigate_next', activeProject.name || 'featured-projects', idx + 1, totalImages);
+                      }}
                       className={`w-24 h-16 rounded overflow-hidden cursor-pointer border-2 transition-all ${
                         idx === currentImageIndex ? 'border-[#ff6b35] opacity-100' : 'border-transparent opacity-50 hover:opacity-75'
                       }`}

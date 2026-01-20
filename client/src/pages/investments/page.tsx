@@ -9,6 +9,7 @@ import AnilBg from '../../wp-content/uploads/2023/02/Anil.png';
 import DownIcon from '../../wp-content/uploads/2025/03/down.png';
 import { pagesService, sectionsService, stockService } from '../../services/apiService';
 import { getApiBaseUrl } from '../../config/env';
+import { trackLinkClick, trackButtonClick } from '../../utils/ga4';
 
 export default function InvestmentsPage() {
   const [pageSections, setPageSections] = useState<any>({});
@@ -529,7 +530,10 @@ export default function InvestmentsPage() {
                     {text}{' '}
                     <a
                       href={`mailto:${email}`}
+                      onClick={() => trackLinkClick(`Email: ${email}`, `mailto:${email}`, 'external')}
                       className="text-gray-900 hover:text-gray-700 font-semibold underline"
+                      data-ga-track="link"
+                      data-ga-label={`Email: ${email}`}
                     >
                       {email}
                     </a>
@@ -589,7 +593,11 @@ export default function InvestmentsPage() {
                         <h3 className="text-lg md:text-xl font-bold text-white mb-[13.6px]">{card.title}</h3>
                         <a
                           href={card.buttonLink || '#'}
+                          onClick={() => trackButtonClick(card.buttonText, 'investments-page-cta', card.buttonLink)}
                           className="inline-block border-2 border-white bg-transparent text-white px-6 py-[8.5px] rounded-full font-semibold hover:bg-white hover:text-black hover:-translate-y-2 transition-all duration-500 ease-out whitespace-nowrap cursor-pointer text-sm md:text-base"
+                          data-ga-track="button"
+                          data-ga-label={card.buttonText}
+                          data-ga-location="investments-page-cta"
                         >
                           {card.buttonText}
                         </a>

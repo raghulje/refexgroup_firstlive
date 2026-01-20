@@ -6,6 +6,7 @@ import MainLayout from '../../components/feature/MainLayout';
 import Footer from '../../components/feature/Footer';
 import { newsroomService, pagesService, sectionsService } from '../../services/apiService';
 import { getApiBaseUrl } from '../../config/env';
+import { trackTabSwitch } from '../../utils/ga4';
 
 interface NewsroomItem {
   id: number;
@@ -350,11 +351,17 @@ const NewsroomPage = () => {
             {/* Tab Navigation */}
             <div className="flex justify-center gap-4 mb-12">
               <button
-                onClick={() => setActiveTab('press')}
+                onClick={() => {
+                  setActiveTab('press');
+                  trackTabSwitch('Press Releases', 'newsroom-page');
+                }}
                 className={`relative px-8 py-3 rounded-full font-semibold whitespace-nowrap overflow-hidden group/btn ${activeTab === 'press'
                     ? 'bg-black text-white shadow-lg'
                     : 'bg-white text-gray-700 border-2 border-black'
                   }`}
+                data-ga-track="button"
+                data-ga-label="Press Releases Tab"
+                data-ga-location="newsroom-page"
               >
                 <span className={`relative z-10 ${activeTab === 'press' ? '' : 'group-hover/btn:text-white transition-colors duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]'}`}>
                   Press Releases
@@ -364,11 +371,17 @@ const NewsroomPage = () => {
                 )}
               </button>
               <button
-                onClick={() => setActiveTab('events')}
+                onClick={() => {
+                  setActiveTab('events');
+                  trackTabSwitch('Events', 'newsroom-page');
+                }}
                 className={`relative px-8 py-3 rounded-full font-semibold whitespace-nowrap overflow-hidden group/btn ${activeTab === 'events'
                     ? 'bg-black text-white shadow-lg'
                     : 'bg-white text-gray-700 border-2 border-black'
                   }`}
+                data-ga-track="button"
+                data-ga-label="Events Tab"
+                data-ga-location="newsroom-page"
               >
                 <span className={`relative z-10 ${activeTab === 'events' ? '' : 'group-hover/btn:text-white transition-colors duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]'}`}>
                   Events

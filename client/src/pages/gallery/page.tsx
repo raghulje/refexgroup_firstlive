@@ -6,6 +6,7 @@ import MainLayout from '../../components/feature/MainLayout';
 import Footer from '../../components/feature/Footer';
 import { pagesService, sectionsService, galleryAlbumsService } from '../../services/apiService';
 import { getApiBaseUrl } from '../../config/env';
+import { trackLinkClick, trackButtonClick } from '../../utils/ga4';
 
 const GalleryPage = () => {
   const [pageSections, setPageSections] = useState<any>({});
@@ -395,7 +396,10 @@ const GalleryPage = () => {
                 <Link
                   key={gallery.year}
                   to={gallery.link}
+                  onClick={() => trackLinkClick(`Gallery ${gallery.year}`, gallery.link, 'internal')}
                   className="group cursor-pointer"
+                  data-ga-track="link"
+                  data-ga-label={`Gallery ${gallery.year}`}
                 >
                   <div className="relative overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300">
                     <div className="aspect-[4/3] overflow-hidden">
@@ -477,7 +481,11 @@ const GalleryPage = () => {
                         <h3 className="text-sm md:text-base font-bold text-white mb-[13.6px]">{card.title}</h3>
                         <Link
                           to={card.buttonLink || '#'}
+                          onClick={() => trackButtonClick(card.buttonText, 'gallery-page-cta', card.buttonLink)}
                           className="inline-block border-2 border-white bg-transparent text-white px-6 py-[8.5px] rounded-full font-semibold hover:bg-white hover:text-black hover:-translate-y-2 transition-all duration-500 ease-out whitespace-nowrap cursor-pointer text-sm md:text-base"
+                          data-ga-track="button"
+                          data-ga-label={card.buttonText}
+                          data-ga-location="gallery-page-cta"
                         >
                           {card.buttonText}
                         </Link>

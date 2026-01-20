@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { trackLinkClick } from '../../../utils/ga4';
 
 import Logo1 from '../../../wp-content/uploads/2025/04/logo01.jpg';
 import Logo2 from '../../../wp-content/uploads/2025/04/logo02.jpg';
@@ -90,9 +91,15 @@ const ClienteleSection = ({ sectionData, clientele = [], getImagePath, getSectio
             return (
               <div
                 key={index}
-                className="bg-white rounded-lg p-4 flex items-center justify-center h-24 hover:shadow-lg transition-shadow duration-300"
+                onClick={() => {
+                  const clientName = typeof logo === 'string' ? `Client ${index + 1}` : (logo?.name || `Client ${index + 1}`);
+                  trackLinkClick(clientName, '#', 'internal');
+                }}
+                className="bg-white rounded-lg p-4 flex items-center justify-center h-24 hover:shadow-lg transition-shadow duration-300 cursor-pointer"
                 data-aos="fade-up"
                 data-aos-delay={index * 30}
+                data-ga-track="link"
+                data-ga-label={`Clientele Logo ${index + 1}`}
               >
                 <img
                   src={finalLogoPath}

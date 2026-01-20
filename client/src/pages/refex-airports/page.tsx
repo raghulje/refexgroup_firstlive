@@ -5,6 +5,7 @@ import MainLayout from '../../components/feature/MainLayout';
 import Footer from '../../components/feature/Footer';
 import ScrollRevealSection from '../../components/base/ScrollRevealSection';
 import { pagesService, sectionsService } from '../../services/apiService';
+import { trackButtonClick } from '../../utils/ga4';
 
 // Import SVG icons
 import DedicatedOnsiteIcon from '../svg/airports/dedicated_onsite.svg?react';
@@ -889,7 +890,11 @@ export default function RefexAirportsPage() {
                     href={ctaButtonLink}
                     target={ctaButtonLink.startsWith('http') ? '_blank' : undefined}
                     rel={ctaButtonLink.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    onClick={() => trackButtonClick(ctaButtonText, 'airports-page-cta', ctaButtonLink)}
                     className="inline-block bg-white text-green-600 px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 rounded-full font-semibold hover:bg-gray-100 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 whitespace-normal sm:whitespace-nowrap text-sm sm:text-base"
+                    data-ga-track="button"
+                    data-ga-label={ctaButtonText}
+                    data-ga-location="airports-page-cta"
                   >
                     {ctaButtonText}
                   </a>
