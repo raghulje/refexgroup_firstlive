@@ -1,0 +1,9 @@
+# Ignore uploaded assets / media
+client/src/wp-content/uploads/
+client/out/
+icons_images/
+server/uploads/
+*.pdf
+*.zip
+*.mp4
+
