@@ -12,7 +12,7 @@ client/package.json
 server/node_modules/
 server/package-lock.json
 server/package.json
-# Docker config (server specific)
+client/out/
 docker-compose.yml
 
 # Uploads and assets
