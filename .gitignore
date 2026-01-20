@@ -1,8 +1,17 @@
-docker-compose.yml
-docker-compose.*.yml
-
 # Environment files
 .env
-.env.*
 *.env
 production*.env
+
+# Server secrets
+server/config/config.json
+
+# Docker config (server specific)
+docker-compose.yml
+
+# Uploads and assets
+client/src/wp-content/uploads/
+client/out/
+*.pdf
+*.zip
+*.mp4
