@@ -6,13 +6,8 @@ production*.env
 # Server secrets
 server/config/config.json
 server/uploads/
-client/node_modules/
-client/package-lock.json
 client/package.json
 server/node_modules/
-server/package-lock.json
-server/package.json
-client/out/
 docker-compose.yml
 
 # Uploads and assets
