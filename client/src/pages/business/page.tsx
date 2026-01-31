@@ -78,6 +78,41 @@ export default function BusinessPage() {
   useEffect(() => {
     const fetchBusinessData = async () => {
       try {
+        // Check cache first
+        const cacheKey = 'business-page-data';
+        const cached = sessionStorage.getItem(cacheKey);
+        
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            const cacheAge = Date.now() - parsed.timestamp;
+            const maxAge = 5 * 60 * 1000; // 5 minutes
+            
+            if (cacheAge < maxAge) {
+              // Use cached data immediately
+              setPageSections(parsed.pageSections || {});
+              setBusinesses(parsed.businesses || []);
+              setLoading(false);
+              
+              // Fetch fresh data in background
+              fetchFreshData();
+              return;
+            }
+          } catch (e) {
+            // Invalid cache, continue to fetch
+          }
+        }
+
+        // No cache or expired, fetch fresh data
+        await fetchFreshData();
+      } catch (error) {
+        console.error('Error fetching business data:', error);
+        setLoading(false);
+      }
+    };
+
+    const fetchFreshData = async () => {
+      try {
         setLoading(true);
 
         // Fetch page and sections
@@ -89,47 +124,55 @@ export default function BusinessPage() {
             sectionsMap[section.sectionKey] = section;
           });
           setPageSections(sectionsMap);
-        }
 
-        // Fetch business cards
-        try {
-          const cards = await businessCardsService.getAll();
-          if (cards && cards.length > 0) {
-            const activeCards = cards
-              .filter((card: any) => card.isActive !== false)
-              .sort((a: any, b: any) => (a.orderIndex || 0) - (b.orderIndex || 0));
+          // Fetch business cards
+          try {
+            const cards = await businessCardsService.getAll();
+            if (cards && cards.length > 0) {
+              const activeCards = cards
+                .filter((card: any) => card.isActive !== false)
+                .sort((a: any, b: any) => (a.orderIndex || 0) - (b.orderIndex || 0));
 
-            const transformedBusinesses = activeCards.map((card: any) => {
-              let imagePath = '';
-              if (card.image?.filePath) {
-                imagePath = getImagePath(card.image);
-              } else if (typeof card.image === 'string' && card.image.trim()) {
-                imagePath = getImagePath(card.image);
+              const transformedBusinesses = activeCards.map((card: any) => {
+                let imagePath = '';
+                if (card.image?.filePath) {
+                  imagePath = getImagePath(card.image);
+                } else if (typeof card.image === 'string' && card.image.trim()) {
+                  imagePath = getImagePath(card.image);
+                }
+
+                return {
+                  id: card.id || card.title?.toLowerCase().replace(/\s+/g, '-'),
+                  title: card.title || '',
+                  description: card.description || '',
+                  image: imagePath || '',
+                  link: card.linkUrl || '#'
+                };
+              });
+
+              // Filter out businesses without valid images
+              const validBusinesses = transformedBusinesses.filter(b => b.image && b.image.startsWith('http'));
+              
+              if (validBusinesses.length > 0) {
+                setBusinesses(validBusinesses);
+                
+                // Cache the data
+                const cacheKey = 'business-page-data';
+                sessionStorage.setItem(cacheKey, JSON.stringify({
+                  pageSections: sectionsMap,
+                  businesses: validBusinesses,
+                  timestamp: Date.now()
+                }));
+              } else {
+                setBusinesses([]);
               }
-
-              return {
-                id: card.id || card.title?.toLowerCase().replace(/\s+/g, '-'),
-                title: card.title || '',
-                description: card.description || '',
-                image: imagePath || '', // No fallback - must come from CMS
-                link: card.linkUrl || '#'
-              };
-            });
-
-            // Filter out businesses without valid images (only /uploads/ paths are valid)
-            const validBusinesses = transformedBusinesses.filter(b => b.image && b.image.startsWith('http'));
-            
-            if (validBusinesses.length > 0) {
-              setBusinesses(validBusinesses);
-            } else {
-              setBusinesses([]);
             }
+          } catch (error) {
+            console.error('Error fetching business cards:', error);
           }
-        } catch (error) {
-          console.error('Error fetching business cards:', error);
         }
       } catch (error) {
-        console.error('Error fetching business data:', error);
+        console.error('Error fetching fresh business data:', error);
       } finally {
         setLoading(false);
       }
@@ -182,6 +225,7 @@ export default function BusinessPage() {
                   className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-6"
                   data-aos="fade-up"
                   data-aos-duration="800"
+                  data-nosnippet
                 >
                   {title}
                 </h1>
@@ -263,7 +307,7 @@ export default function BusinessPage() {
 
             return (
               <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">{heading}</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4" data-nosnippet>{heading}</h2>
                 <p className="text-gray-600 max-w-2xl mx-auto">
                   {description}
                 </p>

@@ -51,6 +51,52 @@ export default function HeroSlider() {
   useEffect(() => {
     const fetchSlides = async () => {
       try {
+        // Check cache first
+        const cacheKey = 'hero-slides-data';
+        const cached = sessionStorage.getItem(cacheKey);
+        
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            const cacheAge = Date.now() - parsed.timestamp;
+            const maxAge = 5 * 60 * 1000; // 5 minutes
+            
+            if (cacheAge < maxAge && parsed.slides && parsed.slides.length > 0) {
+              // Use cached data immediately
+              setSlides(parsed.slides);
+              setLoading(false);
+              
+              // Preload cached images
+              parsed.slides.forEach((slide: Slide) => {
+                if (slide.image && !preloadedImages.has(slide.image)) {
+                  const img = new Image();
+                  img.src = slide.image;
+                  img.fetchPriority = slide.id === parsed.slides[0].id ? 'high' : 'low';
+                  setPreloadedImages(prev => new Set(prev).add(slide.image));
+                }
+              });
+              
+              // Fetch fresh data in background
+              fetchFreshSlides();
+              return;
+            }
+          } catch (e) {
+            // Invalid cache, continue to fetch
+          }
+        }
+
+        // No cache or expired, fetch fresh data
+        await fetchFreshSlides();
+      } catch (error) {
+        console.error('Error fetching hero slides:', error);
+        setError('Failed to load hero slides');
+        setSlides([]);
+        setLoading(false);
+      }
+    };
+
+    const fetchFreshSlides = async () => {
+      try {
         setLoading(true);
         setError(null);
 
@@ -130,6 +176,13 @@ export default function HeroSlider() {
           
           if (validSlides.length > 0) {
             setSlides(validSlides);
+            
+            // Cache the slides data
+            const cacheKey = 'hero-slides-data';
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+              slides: validSlides,
+              timestamp: Date.now()
+            }));
             
             // Preload the first slide image immediately with high priority
             if (validSlides[0]?.image) {

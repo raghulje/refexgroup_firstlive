@@ -8,6 +8,7 @@ import AOS from 'aos'
 import 'aos/dist/aos.css'
 import { initGA4 } from './utils/ga4'
 import { setupGlobalImageLazyLoading } from './utils/imageLazyLoad'
+import { setupRoutePrefetch } from './utils/routePrefetch'
 
 // Initialize Google Analytics 4 (only once)
 initGA4();
@@ -18,9 +19,11 @@ if (typeof window !== 'undefined') {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       setupGlobalImageLazyLoading();
+      setupRoutePrefetch();
     });
   } else {
     setupGlobalImageLazyLoading();
+    setupRoutePrefetch();
   }
 }
 
