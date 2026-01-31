@@ -19,11 +19,13 @@ export const NAV_LINKS: NavLink[] = [
     label: 'Business',
     path: '/#business',
     submenu: [
-      { label: 'Refex Refrigerants', path: '/refex-refrigerants' },
+      // DISABLED: Refex Refrigerants - kept for future re-enabling
+      // { label: 'Refex Refrigerants', path: '/refex-refrigerants' },
       { label: 'Refex Renewables', path: '/refex-renewables' },
       { label: 'Ash & Coal Handling', path: '/refex-ash-coal-handling' },
       { label: 'Refex Medtech', path: '/refex-medtech' },
-      { label: 'Refex Capital', path: '/refex-capital' },
+      // DISABLED: Refex Capital - kept for future re-enabling
+      // { label: 'Refex Capital', path: '/refex-capital' },
       { label: 'Refex Airports', path: '/refex-airports' },
       { label: 'Refex Mobility', path: '/refex-mobility' },
       { label: 'RL Fine Chem', path: '/pharma-rl-fine-chem' },
@@ -35,11 +37,13 @@ export const NAV_LINKS: NavLink[] = [
 ];
 
 export const FOOTER_BUSINESS_LINKS = [
-  { label: 'Refex Refrigerants', path: '/refex-refrigerants' },
+  // DISABLED: Refex Refrigerants - kept for future re-enabling
+  // { label: 'Refex Refrigerants', path: '/refex-refrigerants' },
   { label: 'Refex Renewables', path: '/refex-renewables' },
   { label: 'Ash & Coal Handling', path: '/refex-ash-coal-handling' },
   { label: 'Refex Medtech', path: '/refex-medtech' },
-  { label: 'Refex Capital', path: '/refex-capital' },
+  // DISABLED: Refex Capital - kept for future re-enabling
+  // { label: 'Refex Capital', path: '/refex-capital' },
   { label: 'Refex Airports', path: '/refex-airports' },
   { label: 'Refex Mobility', path: '/refex-mobility' },
   { label: 'RL Fine Chem', path: '/pharma-rl-fine-chem' },
@@ -56,11 +60,13 @@ export const FOOTER_QUICK_LINKS = [
 ];
 
 export const BUSINESS_LINKS = [
-  { label: 'Refex Refrigerants', path: '/refex-refrigerants' },
+  // DISABLED: Refex Refrigerants - kept for future re-enabling
+  // { label: 'Refex Refrigerants', path: '/refex-refrigerants' },
   { label: 'Refex Renewables', path: '/refex-renewables' },
   { label: 'Ash & Coal Handling', path: '/refex-ash-coal-handling' },
   { label: 'Refex Medtech', path: '/refex-medtech' },
-  { label: 'Refex Capital', path: '/refex-capital' },
+  // DISABLED: Refex Capital - kept for future re-enabling
+  // { label: 'Refex Capital', path: '/refex-capital' },
   { label: 'Refex Airports', path: '/refex-airports' },
   { label: 'Refex Mobility', path: '/refex-mobility' },
   { label: 'RL Fine Chem', path: '/pharma-rl-fine-chem' },

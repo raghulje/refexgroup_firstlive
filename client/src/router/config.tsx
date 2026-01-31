@@ -51,10 +51,11 @@ const routes: RouteObject[] = [
     path: "/business",
     element: <BusinessPage />,
   },
-  {
-    path: "/refex-refrigerants",
-    element: <RefexRefrigerantsPage />,
-  },
+  // DISABLED: Refex Refrigerants page - kept for future re-enabling
+  // {
+  //   path: "/refex-refrigerants",
+  //   element: <RefexRefrigerantsPage />,
+  // },
   {
     path: "/refex-renewables",
     element: (
@@ -101,14 +102,15 @@ const routes: RouteObject[] = [
       </MainLayout>
     ),
   },
-  {
-    path: "/refex-capital",
-    element: (
-      <Suspense fallback={<div>Loading...</div>}>
-        <RefexCapitalPage />
-      </Suspense>
-    ),
-  },
+  // DISABLED: Refex Capital page - kept for future re-enabling
+  // {
+  //   path: "/refex-capital",
+  //   element: (
+  //     <Suspense fallback={<div>Loading...</div>}>
+  //       <RefexCapitalPage />
+  //     </Suspense>
+  //   ),
+  // },
   {
     path: "/refex-airports",
     element: (

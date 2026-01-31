@@ -13,11 +13,13 @@ import { trackLinkClick } from '../../utils/ga4';
 
 export default function Footer() {
   const [businessLinks, setBusinessLinks] = useState([
-    { label: 'Refex Refrigerants', path: '/refex-refrigerants' },
+    // DISABLED: Refex Refrigerants - kept for future re-enabling
+    // { label: 'Refex Refrigerants', path: '/refex-refrigerants' },
     { label: 'Refex Renewables', path: '/refex-renewables' },
     { label: 'Refex Ash & Coal Handling', path: '/refex-ash-coal-handling' },
     { label: 'Refex Medtech', path: '/refex-medtech' },
-    { label: 'Refex Capital', path: '/refex-capital' },
+    // DISABLED: Refex Capital - kept for future re-enabling
+    // { label: 'Refex Capital', path: '/refex-capital' },
     { label: 'Refex Airports and Transportation', path: '/refex-airports' },
     { label: 'Refex Mobility', path: '/refex-mobility' },
     { label: 'Refex Life Sciences', path: '/pharma-rl-fine-chem' },
