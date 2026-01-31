@@ -10,7 +10,7 @@ interface VideoSectionProps {
 const VideoSection: React.FC<VideoSectionProps> = ({
     videoUrl = 'https://www.youtube.com/embed/dQw4w9WgXcQ', // Default placeholder
     title = 'Celebrating 23 years of Excellence',
-    description = "Refex's journey of excellence began over two decades ago, built on a foundation of learning, resilience, and agility. From Refrigerant Gases to Ash Utilization & Coal Handling, Renewables, MedTech, Mobility, and Pharmaceuticals, we've continually expanded our horizons."
+    description = "Refex's journey of excellence began over two decades ago, built on a foundation of learning, resilience, and agility. From Ash Utilization & Coal Handling to Renewables, MedTech, Mobility, and Pharmaceuticals, we've continually expanded our horizons."
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 

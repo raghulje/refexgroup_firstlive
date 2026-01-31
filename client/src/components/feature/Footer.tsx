@@ -272,16 +272,29 @@ export default function Footer() {
                   data-ga-label={`Social: ${social.label}`}
                 >
                   {typeof social.icon === 'string' ? (
-                    <img src={social.icon} alt={social.label} className="w-[25px] h-[25px] object-contain" onError={(e) => {
-                      // Fallback to default icon if CMS image fails
-                      const platform = social.label.toLowerCase();
-                      const fallbackIcon = iconMap[platform] || LinkedinIcon;
-                      if (typeof fallbackIcon === 'string') {
-                        (e.target as HTMLImageElement).src = fallbackIcon;
-                      }
-                    }} />
+                    <img 
+                      src={social.icon} 
+                      alt={social.label} 
+                      className="w-[25px] h-[25px] object-contain" 
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => {
+                        // Fallback to default icon if CMS image fails
+                        const platform = social.label.toLowerCase();
+                        const fallbackIcon = iconMap[platform] || LinkedinIcon;
+                        if (typeof fallbackIcon === 'string') {
+                          (e.target as HTMLImageElement).src = fallbackIcon;
+                        }
+                      }} 
+                    />
                   ) : (
-                    <img src={social.icon} alt={social.label} className="w-[25px] h-[25px] object-contain" />
+                    <img 
+                      src={social.icon} 
+                      alt={social.label} 
+                      className="w-[25px] h-[25px] object-contain" 
+                      loading="lazy"
+                      decoding="async"
+                    />
                   )}
                 </a>
               ))}
@@ -370,16 +383,29 @@ export default function Footer() {
                     data-ga-label={`Social: ${social.label}`}
                   >
                     {typeof social.icon === 'string' ? (
-                      <img src={social.icon} alt={social.label} className="w-[25px] h-[25px] object-contain" onError={(e) => {
-                        // Fallback to default icon if CMS image fails
-                        const platform = social.label.toLowerCase();
-                        const fallbackIcon = iconMap[platform] || LinkedinIcon;
-                        if (typeof fallbackIcon === 'string') {
-                          (e.target as HTMLImageElement).src = fallbackIcon;
-                        }
-                      }} />
+                      <img 
+                        src={social.icon} 
+                        alt={social.label} 
+                        className="w-[25px] h-[25px] object-contain" 
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          // Fallback to default icon if CMS image fails
+                          const platform = social.label.toLowerCase();
+                          const fallbackIcon = iconMap[platform] || LinkedinIcon;
+                          if (typeof fallbackIcon === 'string') {
+                            (e.target as HTMLImageElement).src = fallbackIcon;
+                          }
+                        }} 
+                      />
                     ) : (
-                      <img src={social.icon} alt={social.label} className="w-[25px] h-[25px] object-contain" />
+                      <img 
+                        src={social.icon} 
+                        alt={social.label} 
+                        className="w-[25px] h-[25px] object-contain" 
+                        loading="lazy"
+                        decoding="async"
+                      />
                     )}
                   </a>
                 ))}
@@ -458,14 +484,26 @@ export default function Footer() {
                   onClick={() => handleLinkClick(`https://wa.me/${complaintPhone.replace(/\D/g, '')}`, `Footer: Complaint Phone`, true)}
                   data-ga-track="link"
                 >
-                  <img src={PhoneIcon} alt="Phone" className="w-[24px] h-[24px] object-contain" />
+                  <img 
+                    src={PhoneIcon} 
+                    alt="Phone" 
+                    className="w-[24px] h-[24px] object-contain" 
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <span>{complaintPhone}</span>
                 </a>
                 <a
                   href={`mailto:${complaintEmail}`}
                   className="flex items-center gap-[8px] text-[18px] font-bold text-[#131111]  hover:text-[#7cb342] transition-colors duration-300"
                 >
-                  <img src={MailIcon} alt="Email" className="w-[24px] h-[24px] object-contain" />
+                  <img 
+                    src={MailIcon} 
+                    alt="Email" 
+                    className="w-[24px] h-[24px] object-contain" 
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <span>{complaintEmail}</span>
                 </a>
               </div>
