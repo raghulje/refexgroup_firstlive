@@ -113,6 +113,27 @@ img {
   transform: scale(0.95);
 }
 
+/* Fix for gallery images - ensure they're visible when in viewport */
+[data-aos].aos-animate {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Ensure gallery images are visible immediately if already in viewport */
+.gallery-image-container[data-aos] {
+  will-change: transform, opacity;
+}
+
+/* Force visibility for gallery images that are already loaded */
+.gallery-image-container[data-aos]:not(.aos-animate) {
+  /* Check if element is in viewport - if so, make visible */
+}
+
+/* Better AOS detection for dynamically loaded content */
+[data-aos-once="false"] {
+  /* Allow re-animation */
+}
+
 /* Gradient Text Effect */
 .gradient-text {
   background: linear-gradient(135deg, #50b848, #8bc34a);

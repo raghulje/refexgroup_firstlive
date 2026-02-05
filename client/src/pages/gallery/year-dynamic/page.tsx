@@ -66,11 +66,22 @@ const DynamicGalleryYearPage = ({ year: propYear }: { year?: string }) => {
     // Initialize AOS
     useEffect(() => {
         AOS.init({
-            duration: 800,
-            once: true,
-            offset: 100,
+            duration: 600,
+            once: false, // Allow re-animation for dynamic content
+            offset: 50, // Lower offset for better detection
             easing: 'ease-out-cubic',
+            startEvent: 'DOMContentLoaded',
+            disable: false,
+            useClassNames: false,
+            disableMutationObserver: false,
+            debounceDelay: 50,
+            throttleDelay: 99,
         });
+        
+        // Refresh AOS after initialization to ensure all elements are detected
+        setTimeout(() => {
+            AOS.refresh();
+        }, 200);
     }, []);
 
     // Calculate filtered images
@@ -81,10 +92,63 @@ const DynamicGalleryYearPage = ({ year: propYear }: { year?: string }) => {
             return event?.slug === selectedEvent;
         });
 
-    // Refresh AOS when images change
+    // Refresh AOS when images change - with delay to ensure DOM is updated
     useEffect(() => {
-        AOS.refresh();
-    }, [images, selectedEvent]);
+        if (filteredImages.length === 0) return;
+        
+        // Use multiple timeouts to ensure DOM is fully updated and images are loaded
+        const timers: NodeJS.Timeout[] = [];
+        
+        // Function to check if element is in viewport and make it visible
+        const checkAndShowElements = () => {
+            const elements = document.querySelectorAll('.gallery-image-container[data-aos]');
+            elements.forEach((el) => {
+                const rect = el.getBoundingClientRect();
+                const isInViewport = rect.top < window.innerHeight && rect.bottom > 0;
+                if (isInViewport && !el.classList.contains('aos-animate')) {
+                    // Element is in viewport but not animated yet - make it visible
+                    (el as HTMLElement).style.opacity = '1';
+                    (el as HTMLElement).style.visibility = 'visible';
+                    (el as HTMLElement).style.transform = 'none';
+                }
+            });
+        };
+        
+        // First refresh after DOM update
+        timers.push(setTimeout(() => {
+            checkAndShowElements();
+            AOS.refresh();
+        }, 50));
+        
+        // Second refresh after images might have loaded
+        timers.push(setTimeout(() => {
+            checkAndShowElements();
+            AOS.refresh();
+            // Force trigger scroll event to detect elements in viewport
+            window.dispatchEvent(new Event('scroll'));
+        }, 200));
+        
+        // Third refresh to catch any late-loading images
+        timers.push(setTimeout(() => {
+            checkAndShowElements();
+            AOS.refresh();
+        }, 500));
+        
+        // Also check on scroll/resize
+        const handleScroll = () => {
+            checkAndShowElements();
+            AOS.refresh();
+        };
+        
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('resize', handleScroll, { passive: true });
+        
+        return () => {
+            timers.forEach(timer => clearTimeout(timer));
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleScroll);
+        };
+    }, [images, selectedEvent, filteredImages]);
 
     // Handle event selection with smooth scrolling
     const handleEventSelect = (eventSlug: string) => {
@@ -578,14 +642,15 @@ const DynamicGalleryYearPage = ({ year: propYear }: { year?: string }) => {
                                 
                                 return (
                                     <div
-                                        key={image.id}
-                                        className={`group relative cursor-pointer overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-500 ${
+                                        key={`${image.id}-${selectedEvent}`}
+                                        className={`gallery-image-container group relative cursor-pointer overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-500 ${
                                             isHighlighted ? 'ring-4 ring-yellow-400 ring-opacity-75 scale-105 z-10' : ''
                                         }`}
                                         onClick={() => openLightbox(index)}
-                                        data-aos="zoom-in"
-                                        data-aos-delay={index % 10 * 50}
-                                        data-aos-duration="600"
+                                        data-aos="fade-up"
+                                        data-aos-delay={index % 10 * 30}
+                                        data-aos-duration="400"
+                                        data-aos-once="false"
                                     >
                                         <div className="relative w-full h-64 overflow-hidden">
                                         <img
