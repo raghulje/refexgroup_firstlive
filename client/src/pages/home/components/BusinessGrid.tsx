@@ -215,7 +215,7 @@ export default function BusinessGrid() {
                       width={400}
                       height={256}
                       priority={index < 4} // Prioritize first 4 images
-                      placeholder="skeleton"
+                      placeholder="empty"
                       quality={85}
                       objectFit="cover"
                       className="w-full h-full"
