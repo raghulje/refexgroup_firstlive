@@ -20,7 +20,7 @@ export default function CMSImage({
 }: CMSImageProps) {
   // Helper to resolve image path from CMS data
   const resolveImagePath = (data: any): string => {
-    if (!data) return fallback || '';
+    if (!data || data === null || data === undefined) return fallback || '';
 
     // Use custom getImagePath if provided
     if (customGetImagePath) {
@@ -53,58 +53,85 @@ export default function CMSImage({
     }
 
     // Handle objects with path/image properties (Media objects from Sequelize)
-    if (data && typeof data === 'object') {
-      // Handle Sequelize dataValues wrapper
-      const unwrapSequelize = (obj: any): any => {
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      // Handle Sequelize dataValues wrapper - recursive unwrap
+      const unwrapSequelize = (obj: any, depth: number = 0): any => {
+        if (depth > 3) return obj; // Prevent infinite recursion
         if (obj && typeof obj === 'object' && obj.dataValues) {
-          return obj.dataValues;
+          return unwrapSequelize(obj.dataValues, depth + 1);
         }
         return obj;
       };
       
-      const unwrapped = unwrapSequelize(data);
+      let unwrapped = unwrapSequelize(data);
       
-      // Try common CMS image object properties
-      if (unwrapped.path && typeof unwrapped.path === 'string') {
-        if (unwrapped.path.startsWith('/uploads/')) {
-          const apiBase = getApiBaseUrl();
-          return `${apiBase}${unwrapped.path}`;
-        }
-        return unwrapped.path;
-      }
-      if (unwrapped.filePath && typeof unwrapped.filePath === 'string') {
-        if (unwrapped.filePath.startsWith('/uploads/')) {
-          const apiBase = getApiBaseUrl();
-          return `${apiBase}${unwrapped.filePath}`;
-        }
-        // If it's already a full URL, return as-is
-        if (unwrapped.filePath.startsWith('http://') || unwrapped.filePath.startsWith('https://')) {
-          return unwrapped.filePath;
-        }
-        return unwrapped.filePath;
-      }
-      if (unwrapped.url && typeof unwrapped.url === 'string') {
-        return unwrapped.url;
-      }
-      if (unwrapped.image && typeof unwrapped.image === 'string') {
-        return unwrapped.image;
-      }
-      
-      // Try dataValues if not already unwrapped
+      // Also try direct access to dataValues
       if (data.dataValues) {
-        const dataValues = data.dataValues;
-        if (dataValues.filePath && typeof dataValues.filePath === 'string') {
-          if (dataValues.filePath.startsWith('/uploads/')) {
-            const apiBase = getApiBaseUrl();
-            return `${apiBase}${dataValues.filePath}`;
-          }
-          if (dataValues.filePath.startsWith('http://') || dataValues.filePath.startsWith('https://')) {
-            return dataValues.filePath;
-          }
-          return dataValues.filePath;
+        unwrapped = unwrapSequelize(data.dataValues);
+      }
+      
+      // Try common CMS image object properties in order of likelihood
+      const tryPath = (path: string): string | null => {
+        if (!path || typeof path !== 'string') return null;
+        
+        // Filter out old /assets/ paths
+        if (path.startsWith('/assets/')) {
+          return null;
         }
-        if (dataValues.url && typeof dataValues.url === 'string') {
-          return dataValues.url;
+        
+        // Handle /uploads/ paths
+        if (path.startsWith('/uploads/')) {
+          const apiBase = getApiBaseUrl();
+          return `${apiBase}${path}`;
+        }
+        
+        // If it's already a full URL, return as-is
+        if (path.startsWith('http://') || path.startsWith('https://')) {
+          return path;
+        }
+        
+        return path;
+      };
+      
+      // Try filePath first (most common)
+      if (unwrapped.filePath) {
+        const resolved = tryPath(unwrapped.filePath);
+        if (resolved) return resolved;
+      }
+      
+      // Try dataValues.filePath
+      if (data.dataValues?.filePath) {
+        const resolved = tryPath(data.dataValues.filePath);
+        if (resolved) return resolved;
+      }
+      
+      // Try url
+      if (unwrapped.url) {
+        const resolved = tryPath(unwrapped.url);
+        if (resolved) return resolved;
+      }
+      
+      // Try path
+      if (unwrapped.path) {
+        const resolved = tryPath(unwrapped.path);
+        if (resolved) return resolved;
+      }
+      
+      // Try image property
+      if (unwrapped.image && typeof unwrapped.image === 'string') {
+        const resolved = tryPath(unwrapped.image);
+        if (resolved) return resolved;
+      }
+      
+      // Try dataValues properties directly
+      if (data.dataValues) {
+        if (data.dataValues.url) {
+          const resolved = tryPath(data.dataValues.url);
+          if (resolved) return resolved;
+        }
+        if (data.dataValues.path) {
+          const resolved = tryPath(data.dataValues.path);
+          if (resolved) return resolved;
         }
       }
     }

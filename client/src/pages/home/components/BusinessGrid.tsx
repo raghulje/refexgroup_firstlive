@@ -83,14 +83,21 @@ export default function BusinessGrid() {
 
           // Debug: Log image data structure for troubleshooting
           if (process.env.NODE_ENV === 'development') {
-            console.log('Business Cards Image Data:', activeCards.map((card: any) => ({
-              title: card.title,
-              image: card.image,
-              imageType: typeof card.image,
-              hasFilePath: !!card.image?.filePath,
-              hasUrl: !!card.image?.url,
-              hasDataValues: !!card.image?.dataValues
-            })));
+            console.log('Business Cards Image Data:', activeCards.map((card: any) => {
+              const image = card.image;
+              return {
+                title: card.title,
+                image: image,
+                imageType: typeof image,
+                isNull: image === null,
+                isUndefined: image === undefined,
+                hasFilePath: !!(image?.filePath || image?.dataValues?.filePath),
+                hasUrl: !!(image?.url || image?.dataValues?.url),
+                hasDataValues: !!image?.dataValues,
+                filePath: image?.filePath || image?.dataValues?.filePath,
+                url: image?.url || image?.dataValues?.url
+              };
+            }));
           }
 
           // Transform API cards to match component format
@@ -178,28 +185,29 @@ export default function BusinessGrid() {
                 data-aos-delay={index * 100}
               >
                 <div className="relative h-64 overflow-hidden bg-gray-200">
-                  {business.image ? (
-                    <div className="w-full h-full group-hover:scale-110 transition-transform duration-500 ease-out" style={{ willChange: 'transform' }}>
-                      <CMSImage
-                        imageData={business.image}
-                        alt={business.title}
-                        width={400}
-                        height={256}
-                        priority={index < 4} // Prioritize first 4 images
-                        placeholder="skeleton"
-                        quality={85}
-                        objectFit="cover"
-                        className="w-full h-full"
-                        onError={(e) => {
-                          // Error handling is built into CMSImage
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <span className="text-sm">No image available</span>
-                    </div>
-                  )}
+                  {/* Always render CMSImage - it handles null/undefined gracefully */}
+                  <div className="w-full h-full group-hover:scale-110 transition-transform duration-500 ease-out" style={{ willChange: 'transform' }}>
+                    <CMSImage
+                      imageData={business.image}
+                      alt={business.title}
+                      width={400}
+                      height={256}
+                      priority={index < 4} // Prioritize first 4 images
+                      placeholder="skeleton"
+                      quality={85}
+                      objectFit="cover"
+                      className="w-full h-full"
+                      onError={(e) => {
+                        // Error handling is built into CMSImage
+                        if (process.env.NODE_ENV === 'development') {
+                          console.error('Business card image failed to load:', {
+                            title: business.title,
+                            imageData: business.image
+                          });
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="p-6 flex flex-col h-full">
                   <div className="space-y-2 flex-1">

@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Optimize icon font loading */
+@font-face {
+  font-family: 'remixicon';
+  font-display: swap; /* Show fallback immediately, swap when loaded */
+}
+
 /* Mobile Responsiveness Utilities */
 @layer utilities {
   .scrollbar-hide {

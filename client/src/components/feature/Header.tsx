@@ -17,20 +17,34 @@ export default function Header() {
   const [loading, setLoading] = useState(false); // Changed to false to prevent initial flicker
   const location = useLocation();
 
-  // Preload logo immediately when it's set
+  // Preload logo immediately when it's set - with fallback
   useEffect(() => {
-    if (headerLogo) {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'image';
-      link.href = headerLogo;
-      link.setAttribute('fetchpriority', 'high');
-      document.head.appendChild(link);
+    // Always preload default logo immediately
+    const defaultLogo = '/assets/logos/refex-logo.png';
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = defaultLogo;
+    link.setAttribute('fetchpriority', 'high');
+    document.head.appendChild(link);
+    
+    // Preload Image object for immediate loading
+    const img = new Image();
+    img.src = defaultLogo;
+    img.fetchPriority = 'high';
+    
+    // If headerLogo is set, also preload it
+    if (headerLogo && headerLogo !== defaultLogo) {
+      const cmsLink = document.createElement('link');
+      cmsLink.rel = 'preload';
+      cmsLink.as = 'image';
+      cmsLink.href = headerLogo;
+      cmsLink.setAttribute('fetchpriority', 'high');
+      document.head.appendChild(cmsLink);
       
-      // Also preload with Image object for immediate loading
-      const img = new Image();
-      img.src = headerLogo;
-      img.fetchPriority = 'high';
+      const cmsImg = new Image();
+      cmsImg.src = headerLogo;
+      cmsImg.fetchPriority = 'high';
     }
   }, [headerLogo]);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
