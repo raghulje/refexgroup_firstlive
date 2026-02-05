@@ -1,4 +1,5 @@
 import LeadershipPhotoBg from '../../../wp-content/uploads/2023/02/Leadership-Photo-BG.png';
+import OptimizedImage from '../../../components/common/OptimizedImage';
 
 type ProfileCardProps = {
   name: string;
@@ -52,15 +53,19 @@ const ProfileCard = ({
               style={{ padding: "8px" }}
             >
             {/* ACTUAL IMAGE */}
-            <img
+            <OptimizedImage
               src={image}
               alt={name}
-              loading="lazy"
+              width={160}
+              height={160}
+              priority={false}
+              placeholder="skeleton"
+              quality={90}
+              objectFit="cover"
               className="
                 w-full
                 h-full
                 rounded-full
-                object-cover
                 grayscale
                 transition-all
                 duration-500
@@ -68,8 +73,8 @@ const ProfileCard = ({
                 group-hover:grayscale-0
                 group-hover:scale-[1.35]
               "
-              onError={(e) => {
-                e.currentTarget.src = '/assets/placeholders/placeholder-300x300.png';
+              onError={() => {
+                // Error handling is built into OptimizedImage
               }}
             />
           </div>

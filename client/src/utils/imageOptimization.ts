@@ -17,13 +17,27 @@ export interface ImageOptimizationOptions {
 /**
  * Generates an optimized image URL with query parameters
  * Supports both backend optimization and client-side URL manipulation
+ * 
+ * IMPORTANT: Only adds optimization params if explicitly needed.
+ * For small/critical images, returns original URL to avoid breaking.
  */
 export function getOptimizedImageUrl(
   imageSrc: string,
-  options: ImageOptimizationOptions = {}
+  options: ImageOptimizationOptions = {},
+  skipOptimization: boolean = false
 ): string {
   if (!imageSrc || imageSrc.trim() === '') {
     return '';
+  }
+
+  // Skip optimization for small/critical images or if explicitly disabled
+  if (skipOptimization) {
+    // Just ensure full URL for relative paths
+    if (imageSrc.startsWith('/uploads/') && !imageSrc.startsWith('http')) {
+      const apiBase = getApiBaseUrl();
+      return `${apiBase}${imageSrc}`;
+    }
+    return imageSrc;
   }
 
   const {
@@ -40,7 +54,11 @@ export function getOptimizedImageUrl(
     return imageSrc;
   }
 
-  // Handle CMS uploads - add optimization parameters
+  // For small images (logos, icons), skip optimization to avoid breaking
+  // Only optimize if we have explicit width/height requirements
+  const shouldOptimize = width && width > 200; // Only optimize larger images
+
+  // Handle CMS uploads - add optimization parameters only if needed
   if (imageSrc.includes('/uploads/')) {
     const apiBase = getApiBaseUrl();
     let baseUrl = imageSrc;
@@ -52,24 +70,28 @@ export function getOptimizedImageUrl(
         : `${apiBase}/${imageSrc}`;
     }
 
-    const params = new URLSearchParams();
-    
-    if (width) params.append('w', width.toString());
-    if (height) params.append('h', height.toString());
-    if (quality !== 85) params.append('q', quality.toString());
-    if (format !== 'auto') params.append('f', format);
-    if (fit !== 'cover') params.append('fit', fit);
-    if (blur) params.append('blur', blur.toString());
+    // Only add optimization params for larger images
+    if (shouldOptimize) {
+      const params = new URLSearchParams();
+      
+      if (width) params.append('w', width.toString());
+      if (height) params.append('h', height.toString());
+      if (quality !== 85) params.append('q', quality.toString());
+      if (format !== 'auto') params.append('f', format);
+      if (fit !== 'cover') params.append('fit', fit);
+      if (blur) params.append('blur', blur.toString());
 
-    // If URL already has query params, append to existing
-    const separator = baseUrl.includes('?') ? '&' : '?';
-    return `${baseUrl}${separator}${params.toString()}`;
+      // If URL already has query params, append to existing
+      const separator = baseUrl.includes('?') ? '&' : '?';
+      return `${baseUrl}${separator}${params.toString()}`;
+    }
+
+    // Return original URL for small images
+    return baseUrl;
   }
 
-  // For external URLs, try to add optimization if supported
+  // For external URLs, return as-is (external services handle their own optimization)
   if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://')) {
-    // If it's a known image optimization service, add params
-    // Otherwise, return as-is (external services handle their own optimization)
     return imageSrc;
   }
 

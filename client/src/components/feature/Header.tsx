@@ -16,6 +16,23 @@ export default function Header() {
   const [ctaButton, setCtaButton] = useState({ label: 'Get in touch', url: '/contact' });
   const [loading, setLoading] = useState(false); // Changed to false to prevent initial flicker
   const location = useLocation();
+
+  // Preload logo immediately when it's set
+  useEffect(() => {
+    if (headerLogo) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = headerLogo;
+      link.setAttribute('fetchpriority', 'high');
+      document.head.appendChild(link);
+      
+      // Also preload with Image object for immediate loading
+      const img = new Image();
+      img.src = headerLogo;
+      img.fetchPriority = 'high';
+    }
+  }, [headerLogo]);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dropdownContainerRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const headerRef = useRef<HTMLElement | null>(null);

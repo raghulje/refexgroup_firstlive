@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ScrollRevealSection from '../../../components/base/ScrollRevealSection';
 import ProfileCard from './ProfileCard';
+import OptimizedImage from '../../../components/common/OptimizedImage';
 import { leadersService } from '../../../services/apiService';
 import { getApiBaseUrl } from '../../../config/env';
 import LeadershipPhotoBg from '../../../wp-content/uploads/2023/02/Leadership-Photo-BG.png';
@@ -611,12 +612,18 @@ export default function LeadershipSection() {
                       }}
                     >
                       {/* Actual image */}
-                      <img
+                      <OptimizedImage
                         src={selectedLeader.image}
                         alt={selectedLeader.name}
-                        className="w-full h-full rounded-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = '/assets/placeholders/placeholder-300x300.png';
+                        width={160}
+                        height={160}
+                        priority={true}
+                        placeholder="skeleton"
+                        quality={90}
+                        objectFit="cover"
+                        className="w-full h-full rounded-full"
+                        onError={() => {
+                          // Error handling is built into OptimizedImage
                         }}
                       />
                     </div>

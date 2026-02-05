@@ -96,16 +96,19 @@ export default function OptimizedImage({
     };
   }, [priority, isInView]);
 
-  // Preload priority images
+  // Preload priority images immediately with original URL
   useEffect(() => {
     if (priority && src && !isLoaded && !hasError) {
+      // For priority images, preload original URL immediately (no optimization overhead)
       const img = new Image();
-      img.src = getOptimizedImageUrl(src, { width, height, quality });
+      img.fetchPriority = 'high';
+      // Use original URL for priority images to ensure fastest load
+      img.src = src;
       img.onload = () => {
         // Image is preloaded, ready to display
       };
     }
-  }, [priority, src, width, height, quality, isLoaded, hasError]);
+  }, [priority, src, isLoaded, hasError]);
 
   // Handle image load
   const handleLoad = () => {
@@ -113,18 +116,28 @@ export default function OptimizedImage({
     onLoad?.();
   };
 
-  // Handle image error with retry logic
+  // Handle image error with retry logic and fallback to original URL
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const img = e.target as HTMLImageElement;
+    const currentSrc = img.src;
+    
+    // If optimized URL failed, try original URL
+    if (retryCountRef.current === 0 && src && currentSrc !== src) {
+      retryCountRef.current += 1;
+      // Try original URL without optimization
+      img.src = src;
+      return;
+    }
     
     // Retry logic for transient errors
     if (retryCountRef.current < maxRetries && src) {
       retryCountRef.current += 1;
       setTimeout(() => {
         if (img && img.parentElement) {
-          img.src = getOptimizedImageUrl(src, { width, height, quality });
+          // Try original URL on retry
+          img.src = src;
         }
-      }, 1000 * retryCountRef.current); // Exponential backoff
+      }, 500 * retryCountRef.current); // Faster retry
       return;
     }
 
@@ -133,12 +146,16 @@ export default function OptimizedImage({
     onError?.(e);
   };
 
-  // Generate optimized URLs
+  // For priority images or small images, skip optimization to load faster
+  const skipOptimization = priority || (width && width <= 200) || !width;
+  
+  // Generate optimized URLs - skip optimization for small/priority images
   const optimizedSrc = isInView && src 
-    ? getOptimizedImageUrl(src, { width, height, quality })
+    ? getOptimizedImageUrl(src, { width, height, quality }, skipOptimization)
     : '';
   
-  const srcSet = width && isInView && src
+  // Only generate srcset for larger images
+  const srcSet = width && width > 400 && isInView && src && !skipOptimization
     ? generateResponsiveSrcSet(src, width, { height, quality })
     : undefined;
   
@@ -177,21 +194,21 @@ export default function OptimizedImage({
       )}
 
       {/* Actual image */}
-      {!hasError && isInView && optimizedSrc && (
+      {!hasError && isInView && (optimizedSrc || src) && (
         <img
           ref={imgRef}
-          src={optimizedSrc}
+          src={optimizedSrc || src}
           srcSet={srcSet}
           sizes={defaultSizes}
           alt={alt}
           width={width}
           height={height}
           loading={priority ? 'eager' : 'lazy'}
-          decoding="async"
+          decoding={priority ? 'sync' : 'async'}
           fetchPriority={priority ? 'high' : 'auto'}
           onLoad={handleLoad}
           onError={handleError}
-          className={`w-full h-full transition-opacity duration-500 ease-out ${
+          className={`w-full h-full transition-opacity duration-300 ease-out ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           }`}
           style={{
