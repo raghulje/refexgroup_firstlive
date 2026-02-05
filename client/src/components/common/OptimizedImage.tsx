@@ -182,13 +182,21 @@ export default function OptimizedImage({
       )}
 
       {/* Skeleton/Loading placeholder */}
-      {(placeholder === 'skeleton' || placeholder === 'empty') && !isLoaded && !hasError && (
+      {placeholder === 'skeleton' && !isLoaded && !hasError && (
         <div
           className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse"
           style={{
             backgroundSize: '200% 100%',
             animation: 'shimmer 2s infinite',
           }}
+          aria-hidden="true"
+        />
+      )}
+      
+      {/* Empty placeholder - shows nothing, just transparent background */}
+      {placeholder === 'empty' && !isLoaded && !hasError && (
+        <div
+          className="absolute inset-0 bg-transparent"
           aria-hidden="true"
         />
       )}
