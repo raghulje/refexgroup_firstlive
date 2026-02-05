@@ -336,3 +336,97 @@ code {
     monospace;
 }
 
+/* Premium Business Card Button Animation */
+/* Transform-based expansion for smooth, flicker-free animation */
+.explore-button-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 48px;
+  height: 48px;
+  border-radius: 9999px;
+  overflow: hidden;
+  isolation: isolate;
+  transition: width 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: width;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.explore-button-container:hover {
+  width: 160px;
+}
+
+.explore-button-bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #7DC144;
+  border-radius: 9999px;
+  transition: width 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: width;
+}
+
+.explore-button-container:hover .explore-button-bg {
+  width: 100%;
+}
+
+.explore-button-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 160px;
+  height: 100%;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  gap: 0.5rem;
+  z-index: 1;
+}
+
+.explore-button-text {
+  opacity: 0;
+  white-space: nowrap;
+  color: white;
+  font-weight: 600;
+  transform: translateX(-8px);
+  transition: opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94) 100ms,
+              transform 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94) 100ms;
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
+.explore-button-container:hover .explore-button-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.explore-button-icon {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 1.125rem;
+  line-height: 1;
+  transition: left 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              right 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  opacity: 1;
+  z-index: 2;
+  flex-shrink: 0;
+  pointer-events: none;
+  will-change: transform, left, right;
+}
+
+.explore-button-container:hover .explore-button-icon {
+  left: auto;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  opacity: 1;
+}
+

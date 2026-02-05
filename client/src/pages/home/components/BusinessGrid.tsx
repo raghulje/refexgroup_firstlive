@@ -169,15 +169,17 @@ export default function BusinessGrid() {
                 <div className="mt-0.75 flex justify-center">
                   <Link
                     to={business.link}
-                    className="inline-flex items-center justify-center group/button cursor-pointer"
+                    className="inline-flex items-center justify-center cursor-pointer"
+                    style={{ marginTop: '-45px' }}
                   >
-                    <div 
-                    style={{marginTop: '-45px', transition: 'width 1300ms cubic-bezier(0.16, 1, 0.3, 1), padding 1300ms cubic-bezier(0.16, 1, 0.3, 1), height 1300ms cubic-bezier(0.16, 1, 0.3, 1)'}}
-                    className="relative inline-flex items-center justify-center gap-2 bg-[#7DC144] text-white font-semibold rounded-full w-12 h-12 group-hover/button:w-auto group-hover/button:px-6 group-hover/button:py-2.5 overflow-hidden">
-                      <span style={{transition: 'opacity 1300ms cubic-bezier(0.16, 1, 0.3, 1), width 1300ms cubic-bezier(0.16, 1, 0.3, 1), margin-right 1300ms cubic-bezier(0.16, 1, 0.3, 1)'}} className="opacity-0 w-0 overflow-hidden whitespace-nowrap group-hover/button:opacity-100 group-hover/button:w-[110px] group-hover/button:mr-2">
-                        Explore More
-                      </span>
-                      <i style={{transition: 'opacity 1300ms cubic-bezier(0.16, 1, 0.3, 1), transform 1300ms cubic-bezier(0.16, 1, 0.3, 1)', position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}} className="ri-arrow-right-line text-lg flex-shrink-0 group-hover/button:opacity-0 group-hover/button:pointer-events-none"></i>
+                    <div className="explore-button-container">
+                      <div className="explore-button-bg"></div>
+                      <div className="explore-button-content">
+                        <span className="explore-button-text">
+                          Explore More
+                        </span>
+                        <i className="explore-button-icon ri-arrow-right-line"></i>
+                      </div>
                     </div>
                   </Link>
                 </div>

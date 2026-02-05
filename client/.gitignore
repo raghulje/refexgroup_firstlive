@@ -1,2 +1,7 @@
-node_modules
+node_modules/
 .env
+out/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

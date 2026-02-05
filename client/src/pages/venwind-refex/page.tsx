@@ -167,14 +167,27 @@ const VenwindRefexPage = () => {
 
   return (
     <>
-    <MainLayout>
-      <HeroSection sectionData={pageSections['hero']} getImagePath={getImagePath} getSectionContent={getSectionContent} />
-      <StatsSection sectionData={pageSections['stats']} stats={stats} getImagePath={getImagePath} getSectionContent={getSectionContent} />
-      <UniqueSection sectionData={pageSections['unique']} features={features} getImagePath={getImagePath} getSectionContent={getSectionContent} />
-      <TechnicalSpecsSection sectionData={pageSections['technical-specs']} specs={specs} getImagePath={getImagePath} getSectionContent={getSectionContent} />
-      <CTASection sectionData={pageSections['cta']} getImagePath={getImagePath} getSectionContent={getSectionContent} />
-    </MainLayout>
+    <style>{`
+      /* Comment out overflow-x-hidden for venwind page */
+      /* .overflow-x-hidden { overflow-x: hidden; } */
+      
+      /* Override overflow-x-hidden for venwind page - target MainLayout elements */
+      .venwind-page-wrapper .overflow-x-hidden,
+      .venwind-page-wrapper > div.overflow-x-hidden,
+      .venwind-page-wrapper main.overflow-x-hidden {
+        overflow-x: visible !important;
+      }
+    `}</style>
+    <div className="venwind-page-wrapper">
+      <MainLayout>
+        <HeroSection sectionData={pageSections['hero']} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+        <StatsSection sectionData={pageSections['stats']} stats={stats} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+        <UniqueSection sectionData={pageSections['unique']} features={features} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+        <TechnicalSpecsSection sectionData={pageSections['technical-specs']} specs={specs} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+        <CTASection sectionData={pageSections['cta']} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+      </MainLayout>
       <Footer />
+    </div>
     </>
   );
 };

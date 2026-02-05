@@ -11,6 +11,7 @@ import AwardsSection from './components/AwardsSection';
 import NewsroomSection from './components/NewsroomSection';
 import CareersSection from './components/CareersSection';
 import CTASection from './components/CTASection';
+import WelcomeModal from './components/Welcome';
 
 export default function HomePage() {
   // Handle smooth scroll to section on hash navigation
@@ -61,6 +62,7 @@ export default function HomePage() {
         </div>
       </main>
       <Footer />
+      <WelcomeModal />
     </div>
   );
 }

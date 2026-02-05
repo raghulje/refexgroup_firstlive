@@ -160,9 +160,9 @@ const UniqueSection = ({ sectionData, features = [], getImagePath, getSectionCon
                     )}
                   </div>
                   <div className="flex-1">
-                    <h5 className="text-sm font-bold text-gray-800 leading-tight group-hover:text-[#50b848] transition-colors duration-300">
+                    <p className="text-base font-normal text-gray-800 leading-tight group-hover:text-[#50b848] transition-colors duration-300">
                       {feature.text}
-                    </h5>
+                    </p>
                   </div>
                 </div>
               );
