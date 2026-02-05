@@ -58,7 +58,7 @@ interface Business {
   id: number;
   title: string;
   description: string;
-  image: string;
+  image: any; // Can be string, object, or null - CMSImage will handle it
   link: string;
 }
 
@@ -81,51 +81,37 @@ export default function BusinessGrid() {
             .filter((card: any) => card.isActive !== false)
             .sort((a: any, b: any) => (a.orderIndex || 0) - (b.orderIndex || 0));
 
+          // Debug: Log image data structure for troubleshooting
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Business Cards Image Data:', activeCards.map((card: any) => ({
+              title: card.title,
+              image: card.image,
+              imageType: typeof card.image,
+              hasFilePath: !!card.image?.filePath,
+              hasUrl: !!card.image?.url,
+              hasDataValues: !!card.image?.dataValues
+            })));
+          }
+
           // Transform API cards to match component format
+          // Keep the original image object so CMSImage can properly resolve it
           const transformedBusinesses: Business[] = activeCards.map((card: any) => {
-            let imagePath = '';
-
-            // 1) If image is a related Media object
-            if (card.image?.filePath) {
-              imagePath = card.image.filePath;
-            } else if (card.image?.url) {
-              imagePath = card.image.url;
-            }
-
-            // 2) If image is stored directly as a string path on the entity (most likely with new uploads)
-            if (!imagePath && typeof card.image === 'string' && card.image.trim()) {
-              imagePath = card.image.trim();
-            }
-
-            // 3) If we have a relative path, decide how to prefix it
-            if (imagePath && imagePath.startsWith('/')) {
-              // New uploads: /uploads/... should be served from the backend domain
-              if (imagePath.startsWith('/uploads/')) {
-                const apiBase = getApiBaseUrl();
-                imagePath = `${apiBase}${imagePath}`;
-              } else if (imagePath.startsWith('/assets/')) {
-                // Filter out old /assets/ paths - they should not be displayed
-                imagePath = '';
-              }
-            }
+            // Keep the original image data structure for CMSImage to handle
+            // CMSImage will properly resolve paths from various structures
+            const imageData = card.image || null;
 
             return {
               id: card.id,
               title: card.title || '',
               description: card.description || '',
-              image: imagePath || '', // No fallback - must come from CMS
+              image: imageData, // Pass the original image object/data structure
               link: card.linkUrl || '#'
             };
           });
 
-          // Filter out businesses without valid images (only /uploads/ paths are valid)
-          const validBusinesses = transformedBusinesses.filter(b => b.image && b.image.startsWith('http'));
-
-          if (validBusinesses.length > 0) {
-            setBusinesses(validBusinesses);
-          } else {
-            setBusinesses([]);
-          }
+          // Don't filter out businesses - let CMSImage handle missing images gracefully
+          // It will show a placeholder if image is invalid
+          setBusinesses(transformedBusinesses);
         } else {
           setBusinesses([]);
         }

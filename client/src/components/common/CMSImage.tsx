@@ -52,28 +52,60 @@ export default function CMSImage({
       return data;
     }
 
-    // Handle objects with path/image properties
+    // Handle objects with path/image properties (Media objects from Sequelize)
     if (data && typeof data === 'object') {
+      // Handle Sequelize dataValues wrapper
+      const unwrapSequelize = (obj: any): any => {
+        if (obj && typeof obj === 'object' && obj.dataValues) {
+          return obj.dataValues;
+        }
+        return obj;
+      };
+      
+      const unwrapped = unwrapSequelize(data);
+      
       // Try common CMS image object properties
-      if (data.path && typeof data.path === 'string') {
-        if (data.path.startsWith('/uploads/')) {
+      if (unwrapped.path && typeof unwrapped.path === 'string') {
+        if (unwrapped.path.startsWith('/uploads/')) {
           const apiBase = getApiBaseUrl();
-          return `${apiBase}${data.path}`;
+          return `${apiBase}${unwrapped.path}`;
         }
-        return data.path;
+        return unwrapped.path;
       }
-      if (data.filePath && typeof data.filePath === 'string') {
-        if (data.filePath.startsWith('/uploads/')) {
+      if (unwrapped.filePath && typeof unwrapped.filePath === 'string') {
+        if (unwrapped.filePath.startsWith('/uploads/')) {
           const apiBase = getApiBaseUrl();
-          return `${apiBase}${data.filePath}`;
+          return `${apiBase}${unwrapped.filePath}`;
         }
-        return data.filePath;
+        // If it's already a full URL, return as-is
+        if (unwrapped.filePath.startsWith('http://') || unwrapped.filePath.startsWith('https://')) {
+          return unwrapped.filePath;
+        }
+        return unwrapped.filePath;
       }
-      if (data.url && typeof data.url === 'string') {
-        return data.url;
+      if (unwrapped.url && typeof unwrapped.url === 'string') {
+        return unwrapped.url;
       }
-      if (data.image && typeof data.image === 'string') {
-        return data.image;
+      if (unwrapped.image && typeof unwrapped.image === 'string') {
+        return unwrapped.image;
+      }
+      
+      // Try dataValues if not already unwrapped
+      if (data.dataValues) {
+        const dataValues = data.dataValues;
+        if (dataValues.filePath && typeof dataValues.filePath === 'string') {
+          if (dataValues.filePath.startsWith('/uploads/')) {
+            const apiBase = getApiBaseUrl();
+            return `${apiBase}${dataValues.filePath}`;
+          }
+          if (dataValues.filePath.startsWith('http://') || dataValues.filePath.startsWith('https://')) {
+            return dataValues.filePath;
+          }
+          return dataValues.filePath;
+        }
+        if (dataValues.url && typeof dataValues.url === 'string') {
+          return dataValues.url;
+        }
       }
     }
 
@@ -81,6 +113,17 @@ export default function CMSImage({
   };
 
   const imageSrc = resolveImagePath(imageData);
+
+  // Debug logging in development
+  if (process.env.NODE_ENV === 'development' && !imageSrc && imageData) {
+    console.warn('CMSImage: Could not resolve image path', {
+      imageData,
+      imageDataType: typeof imageData,
+      hasFilePath: !!(imageData as any)?.filePath,
+      hasUrl: !!(imageData as any)?.url,
+      hasDataValues: !!(imageData as any)?.dataValues
+    });
+  }
 
   if (!imageSrc) {
     // Return placeholder if no image source
