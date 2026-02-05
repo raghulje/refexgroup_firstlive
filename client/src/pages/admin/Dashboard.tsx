@@ -652,16 +652,26 @@ export default function AdminDashboard() {
         }
       }
 
-      if (currentEntityType === 'business-card' && submitData.image) {
-        if (typeof submitData.image === 'string') {
-          const mediaId = parseInt(submitData.image);
-          if (!isNaN(mediaId)) {
-            submitData.imageId = mediaId;
+      if (currentEntityType === 'business-card') {
+        // Handle image removal - explicitly set imageId to null if image is empty/null
+        if (submitData.image === '' || submitData.image === null || submitData.image === undefined) {
+          submitData.imageId = null;
+          delete submitData.image;
+        } else if (submitData.image) {
+          // Handle image update - convert to imageId
+          if (typeof submitData.image === 'string') {
+            const mediaId = parseInt(submitData.image);
+            if (!isNaN(mediaId) && mediaId > 0) {
+              submitData.imageId = mediaId;
+            } else {
+              // If it's not a valid number, set to null
+              submitData.imageId = null;
+            }
+            delete submitData.image;
+          } else if (typeof submitData.image === 'number') {
+            submitData.imageId = submitData.image > 0 ? submitData.image : null;
             delete submitData.image;
           }
-        } else if (typeof submitData.image === 'number') {
-          submitData.imageId = submitData.image;
-          delete submitData.image;
         }
       }
 

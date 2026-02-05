@@ -87,6 +87,7 @@ export default function BusinessGrid() {
               const image = card.image;
               return {
                 title: card.title,
+                imageId: card.imageId,
                 image: image,
                 imageType: typeof image,
                 isNull: image === null,
@@ -95,7 +96,8 @@ export default function BusinessGrid() {
                 hasUrl: !!(image?.url || image?.dataValues?.url),
                 hasDataValues: !!image?.dataValues,
                 filePath: image?.filePath || image?.dataValues?.filePath,
-                url: image?.url || image?.dataValues?.url
+                url: image?.url || image?.dataValues?.url,
+                fullImageObject: image
               };
             }));
           }
@@ -103,15 +105,25 @@ export default function BusinessGrid() {
           // Transform API cards to match component format
           // Keep the original image object so CMSImage can properly resolve it
           const transformedBusinesses: Business[] = activeCards.map((card: any) => {
-            // Keep the original image data structure for CMSImage to handle
-            // CMSImage will properly resolve paths from various structures
-            const imageData = card.image || null;
+            // Handle image data - check multiple possible structures
+            let imageData = null;
+            
+            // If imageId exists but image object is null, try to construct URL from imageId
+            if (card.imageId && !card.image) {
+              const apiBase = getApiBaseUrl();
+              imageData = `${apiBase}/uploads/media/${card.imageId}`;
+            } else if (card.image) {
+              // Use the image object/data structure
+              imageData = card.image;
+            }
+            
+            // If imageId is null/undefined, imageData should remain null
 
             return {
               id: card.id,
               title: card.title || '',
               description: card.description || '',
-              image: imageData, // Pass the original image object/data structure
+              image: imageData, // Pass the original image object/data structure or constructed URL
               link: card.linkUrl || '#'
             };
           });
@@ -132,6 +144,13 @@ export default function BusinessGrid() {
     };
 
     fetchBusinessCards();
+    
+    // Listen for CMS refresh events to refetch data when business cards are updated
+    const handleRefresh = () => {
+      fetchBusinessCards();
+    };
+    window.addEventListener('cms-refresh', handleRefresh);
+    return () => window.removeEventListener('cms-refresh', handleRefresh);
   }, []);
 
   // Loading skeleton

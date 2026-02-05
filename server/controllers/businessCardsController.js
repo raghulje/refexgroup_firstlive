@@ -44,6 +44,17 @@ exports.update = asyncHandler(async (req, res) => {
   if (!card) {
     return status.responseStatus(res, 404, "Not found");
   }
+  
+  // Handle imageId - convert empty string to null
+  if (req.body.imageId !== undefined) {
+    if (req.body.imageId === '' || req.body.imageId === null) {
+      req.body.imageId = null;
+    } else if (typeof req.body.imageId === 'string') {
+      const imageId = parseInt(req.body.imageId);
+      req.body.imageId = isNaN(imageId) || imageId <= 0 ? null : imageId;
+    }
+  }
+  
   await card.update(req.body);
   // Reload with media relationship
   const updatedCard = await BusinessCard.findByPk(id, {
