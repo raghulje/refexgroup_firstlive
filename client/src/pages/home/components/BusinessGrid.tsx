@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { businessCardsService } from '../../../services/apiService';
 import { getApiBaseUrl } from '../../../config/env';
+import CMSImage from '../../../components/common/CMSImage';
 
 // CSS for smooth hover effect without flickering - premium animation
 const businessCardButtonStyles = `
@@ -192,15 +193,22 @@ export default function BusinessGrid() {
               >
                 <div className="relative h-64 overflow-hidden bg-gray-200">
                   {business.image ? (
-                    <img
-                      src={business.image}
-                      alt={business.title}
-                      className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-500 ease-out"
-                      style={{ willChange: 'transform' }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
+                    <div className="w-full h-full group-hover:scale-110 transition-transform duration-500 ease-out" style={{ willChange: 'transform' }}>
+                      <CMSImage
+                        imageData={business.image}
+                        alt={business.title}
+                        width={400}
+                        height={256}
+                        priority={index < 4} // Prioritize first 4 images
+                        placeholder="skeleton"
+                        quality={85}
+                        objectFit="cover"
+                        className="w-full h-full"
+                        onError={(e) => {
+                          // Error handling is built into CMSImage
+                        }}
+                      />
+                    </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
                       <span className="text-sm">No image available</span>

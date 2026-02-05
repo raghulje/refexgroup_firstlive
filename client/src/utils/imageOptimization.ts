@@ -1,178 +1,147 @@
 import { getApiBaseUrl } from '../config/env';
 
 /**
- * Image Optimization Utilities
- * Provides functions for generating optimized image URLs and responsive srcsets
+ * Image Optimization Utility
+ * Generates optimized image URLs with query parameters for resizing and compression
  */
 
 export interface ImageOptimizationOptions {
   width?: number;
   height?: number;
   quality?: number; // 1-100
-  format?: 'webp' | 'avif' | 'jpg' | 'png' | 'auto';
+  format?: 'webp' | 'jpeg' | 'png' | 'auto';
   fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+  blur?: number; // 0-1000, for low-quality placeholder
 }
 
 /**
- * Generate optimized image URL with query parameters
- * This can be used with image optimization services or CDN
+ * Generates an optimized image URL with query parameters
+ * Supports both backend optimization and client-side URL manipulation
  */
 export function getOptimizedImageUrl(
-  imageUrl: string,
+  imageSrc: string,
   options: ImageOptimizationOptions = {}
 ): string {
+  if (!imageSrc || imageSrc.trim() === '') {
+    return '';
+  }
+
   const {
     width,
     height,
     quality = 85,
     format = 'auto',
     fit = 'cover',
+    blur
   } = options;
 
-  // If it's already a full URL, check if it needs optimization
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    // If it's from our API, add optimization params
-    if (imageUrl.includes('/uploads/') || imageUrl.includes('/api/')) {
-      const url = new URL(imageUrl);
-      if (width) url.searchParams.set('w', width.toString());
-      if (height) url.searchParams.set('h', height.toString());
-      url.searchParams.set('q', quality.toString());
-      if (format !== 'auto') url.searchParams.set('f', format);
-      url.searchParams.set('fit', fit);
-      return url.toString();
-    }
-    // External URLs - return as-is (could integrate with image CDN here)
-    return imageUrl;
+  // If it's already a data URL or external CDN, return as-is
+  if (imageSrc.startsWith('data:') || imageSrc.startsWith('blob:')) {
+    return imageSrc;
   }
 
-  // Relative paths - convert to full URL and add optimization
-  const apiBase = getApiBaseUrl();
-  const fullUrl = imageUrl.startsWith('/') 
-    ? `${apiBase}${imageUrl}`
-    : `${apiBase}/${imageUrl}`;
+  // Handle CMS uploads - add optimization parameters
+  if (imageSrc.includes('/uploads/')) {
+    const apiBase = getApiBaseUrl();
+    let baseUrl = imageSrc;
+    
+    // Ensure full URL
+    if (!imageSrc.startsWith('http')) {
+      baseUrl = imageSrc.startsWith('/') 
+        ? `${apiBase}${imageSrc}`
+        : `${apiBase}/${imageSrc}`;
+    }
 
-  const url = new URL(fullUrl);
-  if (width) url.searchParams.set('w', width.toString());
-  if (height) url.searchParams.set('h', height.toString());
-  url.searchParams.set('q', quality.toString());
-  if (format !== 'auto') url.searchParams.set('f', format);
-  url.searchParams.set('fit', fit);
+    const params = new URLSearchParams();
+    
+    if (width) params.append('w', width.toString());
+    if (height) params.append('h', height.toString());
+    if (quality !== 85) params.append('q', quality.toString());
+    if (format !== 'auto') params.append('f', format);
+    if (fit !== 'cover') params.append('fit', fit);
+    if (blur) params.append('blur', blur.toString());
 
-  return url.toString();
+    // If URL already has query params, append to existing
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}${params.toString()}`;
+  }
+
+  // For external URLs, try to add optimization if supported
+  if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://')) {
+    // If it's a known image optimization service, add params
+    // Otherwise, return as-is (external services handle their own optimization)
+    return imageSrc;
+  }
+
+  return imageSrc;
 }
 
 /**
- * Generate responsive srcset for an image
+ * Generates a low-quality placeholder URL for progressive loading
  */
-export function generateSrcSet(
-  imageUrl: string,
+export function getLowQualityPlaceholder(imageSrc: string): string {
+  return getOptimizedImageUrl(imageSrc, {
+    width: 20,
+    quality: 20,
+    blur: 10
+  });
+}
+
+/**
+ * Generates responsive srcset for an image
+ */
+export function generateResponsiveSrcSet(
+  baseSrc: string,
   baseWidth: number,
   options: Omit<ImageOptimizationOptions, 'width'> = {}
 ): string {
-  const breakpoints = [640, 768, 1024, 1280, 1536, 1920]; // Common breakpoints
+  const breakpoints = [640, 768, 1024, 1280, 1536, 1920];
   const srcSets: string[] = [];
 
-  // Add original size
-  srcSets.push(
-    `${getOptimizedImageUrl(imageUrl, { ...options, width: baseWidth })} ${baseWidth}w`
-  );
-
-  // Generate smaller sizes
-  breakpoints.forEach((bp) => {
-    if (bp < baseWidth) {
-      srcSets.push(
-        `${getOptimizedImageUrl(imageUrl, { ...options, width: bp })} ${bp}w`
-      );
+  breakpoints.forEach(bp => {
+    if (bp <= baseWidth) {
+      const optimizedUrl = getOptimizedImageUrl(baseSrc, {
+        ...options,
+        width: bp
+      });
+      srcSets.push(`${optimizedUrl} ${bp}w`);
     }
   });
+
+  // Always include the base width
+  const baseOptimized = getOptimizedImageUrl(baseSrc, {
+    ...options,
+    width: baseWidth
+  });
+  srcSets.push(`${baseOptimized} ${baseWidth}w`);
 
   return srcSets.join(', ');
 }
 
 /**
- * Generate sizes attribute for responsive images
+ * Preloads an image in the browser
  */
-export function generateSizes(
-  defaultSize: string = '100vw',
-  breakpoints?: { [key: string]: string }
-): string {
-  if (!breakpoints) {
-    return defaultSize;
-  }
-
-  const sizes: string[] = [];
-  const sortedBreakpoints = Object.keys(breakpoints)
-    .map(Number)
-    .sort((a, b) => a - b);
-
-  sortedBreakpoints.forEach((bp) => {
-    sizes.push(`(max-width: ${bp}px) ${breakpoints[bp.toString()]}`);
-  });
-
-  sizes.push(defaultSize); // Default size
-  return sizes.join(', ');
-}
-
-/**
- * Preload critical images
- */
-export function preloadImage(src: string, options?: { as?: string; fetchPriority?: 'high' | 'low' | 'auto' }): void {
-  if (typeof window === 'undefined') return;
-
-  const link = document.createElement('link');
-  link.rel = 'preload';
-  link.as = options?.as || 'image';
-  link.href = src;
-  if (options?.fetchPriority) {
-    link.setAttribute('fetchpriority', options.fetchPriority);
-  }
-
-  // Check if already preloaded
-  const existing = document.querySelector(`link[rel="preload"][href="${src}"]`);
-  if (!existing) {
-    document.head.appendChild(link);
-  }
-}
-
-/**
- * Preload multiple images
- */
-export function preloadImages(
-  images: Array<{ src: string; as?: string; fetchPriority?: 'high' | 'low' | 'auto' }>
-): void {
-  images.forEach((img) => {
-    preloadImage(img.src, { as: img.as, fetchPriority: img.fetchPriority });
+export function preloadImage(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error(`Failed to preload image: ${src}`));
+    img.src = src;
   });
 }
 
 /**
- * Generate blur placeholder data URL
- * This is a simple base64 encoded tiny image
- * In production, you might want to generate actual blur placeholders
+ * Preloads multiple images
  */
-export function generateBlurPlaceholder(width: number = 20, height: number = 20): string {
-  // This is a minimal SVG placeholder
-  // In production, consider using a service like blurha.sh or generating actual blur data
-  const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="#e5e7eb"/>
-    </svg>
-  `.trim();
-  
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
+export async function preloadImages(srcs: string[]): Promise<void[]> {
+  return Promise.all(srcs.map(src => preloadImage(src)));
 }
 
 /**
- * Check if image is above the fold (critical)
- * Simple heuristic - can be enhanced
+ * Checks if an image is already loaded/cached
  */
-export function isAboveTheFold(element: HTMLElement | null): boolean {
-  if (!element || typeof window === 'undefined') return false;
-  
-  const rect = element.getBoundingClientRect();
-  const viewportHeight = window.innerHeight;
-  
-  // Consider above the fold if within first 1.5 viewport heights
-  return rect.top < viewportHeight * 1.5;
+export function isImageCached(src: string): boolean {
+  const img = new Image();
+  img.src = src;
+  return img.complete || img.naturalWidth > 0;
 }
-

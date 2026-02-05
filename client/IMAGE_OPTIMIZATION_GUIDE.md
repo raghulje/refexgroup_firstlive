@@ -1,176 +1,220 @@
 # Image Optimization Guide
 
-This document outlines the image optimization strategies implemented to improve website performance.
+This guide explains how to use the optimized image components for faster loading and better user experience.
 
-## 🚀 Performance Improvements
+## Overview
 
-### 1. **Lazy Loading**
-- All images below the fold automatically use `loading="lazy"`
-- Above-the-fold images use `loading="eager"` with `fetchpriority="high"`
-- Global lazy loading is automatically applied to all images
+The image optimization system includes:
+- **OptimizedImage**: Advanced image component with lazy loading, progressive loading, and error handling
+- **CMSImage**: Wrapper component that automatically handles CMS image data
+- **Image Optimization Utilities**: Functions for generating optimized URLs and preloading images
 
-### 2. **Optimized Image Component**
-- `OptimizedImage` component with built-in lazy loading
-- Responsive images with srcset support
-- Blur placeholder support
-- Automatic error handling
+## Quick Start
 
-### 3. **Image Preloading**
-- Critical images (hero slider, above-the-fold) are preloaded
-- Adjacent slide images are preloaded in background
-- Preloading uses `fetchpriority` for better resource hints
+### Using CMSImage (Recommended for CMS Images)
 
-### 4. **Global Image Optimization**
-- Automatic lazy loading setup in `main.tsx`
-- Intersection Observer for viewport detection
-- Automatic `loading` and `decoding` attributes
-
-## 📦 Components
-
-### OptimizedImage Component
 ```tsx
-import OptimizedImage from '@/components/common/OptimizedImage';
+import CMSImage from '../components/common/CMSImage';
+
+// In your component
+<CMSImage
+  imageData={business.image} // CMS image data (string, object, or number)
+  alt="Business card image"
+  width={400}
+  height={256}
+  priority={index < 4} // Prioritize first 4 images
+  placeholder="skeleton" // or "blur" or "empty"
+  quality={85}
+/>
+```
+
+### Using OptimizedImage (For Direct Image URLs)
+
+```tsx
+import OptimizedImage from '../components/common/OptimizedImage';
 
 <OptimizedImage
-  src="/path/to/image.jpg"
+  src="https://example.com/image.jpg"
   alt="Description"
   width={800}
   height={600}
   priority={true} // For above-the-fold images
   placeholder="blur"
-  blurDataURL="data:image/..."
-  className="rounded-lg"
+  blurDataURL="data:image/jpeg;base64,..." // Optional low-quality placeholder
+  quality={85}
 />
 ```
 
-### Image Preloading Hook
-```tsx
-import { useImagePreload } from '@/hooks/useImagePreload';
+## Props
 
-// Preload critical images
-useImagePreload([
-  { src: '/hero-image.jpg', fetchPriority: 'high' },
-  { src: '/logo.png', fetchPriority: 'high' }
-]);
+### CMSImage Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `imageData` | `any` | Required | CMS image data (string path, object, or media ID) |
+| `getImagePath` | `function` | Optional | Custom function to extract image path from CMS data |
+| `fallback` | `string` | Optional | Fallback image URL if imageData is invalid |
+| All OptimizedImage props | - | - | See OptimizedImage props below |
+
+### OptimizedImage Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `src` | `string` | Required | Image source URL |
+| `alt` | `string` | Required | Alt text for accessibility |
+| `width` | `number` | Optional | Image width (for optimization) |
+| `height` | `number` | Optional | Image height (for optimization) |
+| `priority` | `boolean` | `false` | Set to `true` for above-the-fold images |
+| `placeholder` | `'blur' \| 'skeleton' \| 'empty'` | `'skeleton'` | Loading placeholder type |
+| `blurDataURL` | `string` | Optional | Low-quality placeholder for blur effect |
+| `sizes` | `string` | Auto | Responsive image sizes attribute |
+| `quality` | `number` | `85` | Image quality (1-100) |
+| `objectFit` | `string` | `'cover'` | CSS object-fit value |
+| `onLoad` | `function` | Optional | Callback when image loads |
+| `onError` | `function` | Optional | Callback when image fails to load |
+
+## Best Practices
+
+### 1. Prioritize Above-the-Fold Images
+
+```tsx
+// Hero images, logos, and first few items should be prioritized
+<CMSImage
+  imageData={heroImage}
+  priority={true}
+  width={1920}
+  height={1080}
+/>
 ```
 
-### Image Optimization Utilities
+### 2. Use Appropriate Placeholders
+
 ```tsx
-import { getOptimizedImageUrl, generateSrcSet } from '@/utils/imageOptimization';
+// For images with known aspect ratio
+<CMSImage
+  imageData={image}
+  placeholder="skeleton" // Shows animated skeleton
+/>
 
-// Get optimized URL
-const optimizedUrl = getOptimizedImageUrl('/image.jpg', {
-  width: 800,
-  quality: 85,
-  format: 'webp'
-});
+// For images with blur placeholder
+<CMSImage
+  imageData={image}
+  placeholder="blur"
+  blurDataURL={lowQualityBase64}
+/>
 
-// Generate responsive srcset
-const srcSet = generateSrcSet('/image.jpg', 1920);
+// For minimal placeholder
+<CMSImage
+  imageData={image}
+  placeholder="empty" // No placeholder, just empty space
+/>
 ```
 
-## 🔧 Implementation Details
+### 3. Set Appropriate Dimensions
 
-### Automatic Lazy Loading
-The global lazy loading system:
-- Detects images without `loading` attribute
-- Adds `loading="lazy"` to below-the-fold images
-- Adds `loading="eager"` with `fetchpriority="high"` to above-the-fold images
-- Uses Intersection Observer for efficient viewport detection
+Always provide width and height when possible for:
+- Better layout stability (prevents layout shift)
+- Automatic image optimization
+- Responsive srcset generation
 
-### Image Loading Strategy
-1. **Critical Images (Above Fold)**
-   - `loading="eager"`
-   - `fetchpriority="high"`
-   - Preloaded in document head
+```tsx
+<CMSImage
+  imageData={image}
+  width={400}  // Actual display width
+  height={256} // Actual display height
+/>
+```
 
-2. **Hero Slider Images**
-   - First slide: `fetchpriority="high"`, preloaded immediately
-   - Adjacent slides: Preloaded in background with `fetchpriority="low"`
-   - Other slides: Lazy loaded
+### 4. Preload Critical Images
 
-3. **Below Fold Images**
-   - `loading="lazy"`
-   - `decoding="async"`
-   - Loaded when entering viewport (50px margin)
+For hero images and critical above-the-fold content:
 
-## 📊 Best Practices
+```tsx
+import { preloadCriticalImages } from '../utils/imagePreloader';
 
-### For Developers
+useEffect(() => {
+  // Preload hero images
+  preloadCriticalImages([
+    heroImage1,
+    heroImage2,
+    logoImage
+  ], { width: 1920, quality: 90 });
+}, []);
+```
 
-1. **Use OptimizedImage for new components**
-   ```tsx
-   <OptimizedImage src={imageSrc} alt="..." width={800} height={600} />
-   ```
+### 5. Use Lazy Loading for Below-Fold Images
 
-2. **Add lazy loading to existing img tags**
-   ```tsx
-   <img src="..." alt="..." loading="lazy" decoding="async" />
-   ```
+```tsx
+// Images below the fold automatically use lazy loading
+<CMSImage
+  imageData={image}
+  priority={false} // Default, enables lazy loading
+/>
+```
 
-3. **Preload critical images**
-   ```tsx
-   useImagePreload([{ src: '/critical-image.jpg', fetchPriority: 'high' }]);
-   ```
+## Migration Guide
 
-4. **Use appropriate image sizes**
-   - Hero images: 1920px width
-   - Card images: 800px width
-   - Thumbnails: 400px width
+### Replacing Regular img Tags
 
-### For CMS/Content
+**Before:**
+```tsx
+<img
+  src={business.image}
+  alt={business.title}
+  className="w-full h-full object-cover"
+  onError={(e) => {
+    (e.target as HTMLImageElement).style.display = 'none';
+  }}
+/>
+```
 
-1. **Upload optimized images**
-   - Compress images before upload (use tools like TinyPNG)
-   - Use WebP format when possible
-   - Keep file sizes under 500KB for web images
+**After:**
+```tsx
+<CMSImage
+  imageData={business.image}
+  alt={business.title}
+  width={400}
+  height={256}
+  className="w-full h-full"
+  objectFit="cover"
+/>
+```
 
-2. **Provide multiple sizes**
-   - Upload high-res version
-   - System will generate responsive sizes
+## Performance Benefits
 
-3. **Use descriptive alt text**
-   - Improves SEO and accessibility
+1. **Lazy Loading**: Images only load when they're about to enter the viewport
+2. **Progressive Loading**: Low-quality placeholders show immediately, then fade to full quality
+3. **Automatic Optimization**: Images are automatically optimized with query parameters
+4. **Responsive Images**: Automatic srcset generation for different screen sizes
+5. **Error Handling**: Built-in retry logic and error placeholders
+6. **Priority Loading**: Critical images load first
 
-## 🎯 Performance Metrics
+## Backend Requirements
 
-Expected improvements:
-- **Initial Load Time**: 30-50% reduction
-- **Time to Interactive**: 20-40% improvement
-- **Largest Contentful Paint (LCP)**: 40-60% improvement
-- **Bandwidth Usage**: 30-50% reduction (for users who don't scroll)
+For full optimization, your backend should support image optimization query parameters:
 
-## 🔍 Monitoring
+- `?w=800` - Resize to width
+- `?h=600` - Resize to height
+- `?q=85` - Quality (1-100)
+- `?f=webp` - Format (webp, jpeg, png)
+- `?fit=cover` - Fit mode
+- `?blur=10` - Blur amount for placeholders
 
-Monitor these metrics:
-- **LCP (Largest Contentful Paint)**: Should be < 2.5s
-- **FCP (First Contentful Paint)**: Should be < 1.8s
-- **Total Blocking Time**: Should be < 200ms
-- **Cumulative Layout Shift (CLS)**: Should be < 0.1
+If your backend doesn't support these, the images will still work but won't be optimized.
 
-## 🛠️ Future Enhancements
+## Troubleshooting
 
-1. **Image CDN Integration**
-   - Consider using Cloudinary, Imgix, or similar
-   - Automatic format conversion (WebP, AVIF)
-   - Automatic optimization
+### Images Not Loading
+- Check that `imageData` contains a valid image path
+- Verify the image URL is accessible
+- Check browser console for errors
 
-2. **Service Worker Caching**
-   - Cache optimized images
-   - Offline support
+### Images Loading Slowly
+- Ensure `priority={true}` for above-the-fold images
+- Use appropriate `width` and `height` props
+- Consider reducing `quality` for non-critical images
 
-3. **Progressive Image Loading**
-   - Low-quality placeholder → High-quality image
-   - Better perceived performance
-
-4. **Responsive Images**
-   - Implement `srcset` for all images
-   - Art direction with `<picture>` element
-
-## 📝 Notes
-
-- All images from CMS are automatically optimized
-- Static images in `/public` should be optimized before deployment
-- Consider using image optimization services for production
-- Monitor image loading performance in production
-
+### Layout Shift
+- Always provide `width` and `height` props
+- Use appropriate `objectFit` value
+- Consider using aspect-ratio CSS
