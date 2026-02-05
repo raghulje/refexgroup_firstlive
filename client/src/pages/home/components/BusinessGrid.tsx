@@ -205,7 +205,7 @@ export default function BusinessGrid() {
                 data-aos="fade-up"
                 data-aos-delay={index * 100}
               >
-                <div className="relative h-64 overflow-hidden bg-gray-200">
+                <div className="relative h-64 overflow-hidden bg-transparent">
                   {/* Always render CMSImage - it handles null/undefined gracefully */}
                   <div className="w-full h-full group-hover:scale-110 transition-transform duration-500 ease-out" style={{ willChange: 'transform' }}>
                     <CMSImage
