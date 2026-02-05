@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import ScrollRevealSection from '../../../components/base/ScrollRevealSection';
 import ProfileCard from './ProfileCard';
-import OptimizedImage from '../../../components/common/OptimizedImage';
+import CMSImage from '../../../components/common/CMSImage';
 import { leadersService } from '../../../services/apiService';
 import { getApiBaseUrl } from '../../../config/env';
 import LeadershipPhotoBg from '../../../wp-content/uploads/2023/02/Leadership-Photo-BG.png';
@@ -11,7 +11,8 @@ interface Leader {
   id?: number;
   name: string;
   title: string;
-  image: string;
+  image: any; // Can be string, object, or null - CMSImage will handle it
+  imageId?: number | string | null; // Store imageId for fallback
   bio: string;
   linkedinUrl?: string;
   description?: string | string[];
@@ -341,31 +342,45 @@ export default function LeadershipSection() {
         const leadersData = await leadersService.getAll();
 
         if (leadersData && leadersData.length > 0) {
+          // Debug: Log image data structure for troubleshooting
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Leadership Image Data:', leadersData.map((leader: any) => {
+              const image = leader.image;
+              return {
+                name: leader.name,
+                imageId: leader.imageId,
+                image: image,
+                imageType: typeof image,
+                isNull: image === null,
+                isUndefined: image === undefined,
+                hasFilePath: !!(image?.filePath || image?.dataValues?.filePath),
+                hasUrl: !!(image?.url || image?.dataValues?.url),
+                hasDataValues: !!image?.dataValues,
+                filePath: image?.filePath || image?.dataValues?.filePath,
+                url: image?.url || image?.dataValues?.url,
+                fullImageObject: image
+              };
+            }));
+          }
+
           // Filter active leaders and sort by orderIndex
           const activeLeaders = leadersData
             .filter((leader: any) => leader.isActive !== false)
             .sort((a: any, b: any) => (a.orderIndex || 0) - (b.orderIndex || 0))
             .map((leader: any) => {
-              // Extract image path
-              let imagePath = '';
-
-              // Handle image from various structures
-              if (leader.image?.filePath) {
-                if (leader.image.filePath.startsWith('/uploads/')) {
-                  const apiBase = getApiBaseUrl();
-                  imagePath = `${apiBase}${leader.image.filePath}`;
-                } else {
-                  imagePath = leader.image.filePath;
-                }
-              } else if (leader.image?.url) {
-                imagePath = leader.image.url;
-              } else if (typeof leader.image === 'string' && leader.image.trim()) {
-                imagePath = leader.image;
-              } else {
-                // Fallback to default path pattern
-                const nameSlug = leader.name?.toLowerCase().replace(/\s+/g, '-') || 'default';
-                imagePath = `/assets/leadership/${nameSlug}.png`;
+              // Handle image data - pass raw image object/data structure to CMSImage
+              let imageData = null;
+              
+              // If imageId exists but image object is null, try to construct URL from imageId
+              if (leader.imageId && !leader.image) {
+                const apiBase = getApiBaseUrl();
+                imageData = `${apiBase}/uploads/media/${leader.imageId}`;
+              } else if (leader.image) {
+                // Use the image object/data structure (CMSImage will handle it)
+                imageData = leader.image;
               }
+              
+              // If imageId is null/undefined, imageData should remain null
 
               // Handle bio/description
               let description: string[] = [];
@@ -381,7 +396,8 @@ export default function LeadershipSection() {
                 id: leader.id,
                 name: leader.name || '',
                 title: leader.position || leader.title || '',
-                image: imagePath,
+                image: imageData, // Pass raw image object/data structure - CMSImage will handle it
+                imageId: leader.imageId || null, // Store imageId for fallback
                 bio: leader.bio || '',
                 linkedinUrl: leader.linkedinUrl || undefined,
                 description: description.length > 0 ? description : undefined
@@ -492,7 +508,7 @@ export default function LeadershipSection() {
                   name={leader.name}
                   title={leader.title}
                   image={leader.image}
-
+                  imageId={leader.imageId}
                   onReadMore={() => {
                     setSelectedLeader(leader);
                     modalOpenTime.current = Date.now();
@@ -612,8 +628,9 @@ export default function LeadershipSection() {
                       }}
                     >
                       {/* Actual image */}
-                      <OptimizedImage
-                        src={selectedLeader.image}
+                      <CMSImage
+                        imageData={selectedLeader.image}
+                        imageId={selectedLeader.imageId}
                         alt={selectedLeader.name}
                         width={160}
                         height={160}
@@ -623,7 +640,7 @@ export default function LeadershipSection() {
                         objectFit="cover"
                         className="w-full h-full rounded-full"
                         onError={() => {
-                          // Error handling is built into OptimizedImage
+                          // Error handling is built into CMSImage
                         }}
                       />
                     </div>

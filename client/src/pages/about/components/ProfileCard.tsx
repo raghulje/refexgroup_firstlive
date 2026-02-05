@@ -1,10 +1,11 @@
 import LeadershipPhotoBg from '../../../wp-content/uploads/2023/02/Leadership-Photo-BG.png';
-import OptimizedImage from '../../../components/common/OptimizedImage';
+import CMSImage from '../../../components/common/CMSImage';
 
 type ProfileCardProps = {
   name: string;
   title: string;
-  image: string;
+  image: any; // Can be string, object, or null - CMSImage will handle it
+  imageId?: number | string | null; // Optional imageId for fallback
   onReadMore: () => void;
 };
 
@@ -12,6 +13,7 @@ const ProfileCard = ({
   name,
   title,
   image,
+  imageId,
   onReadMore,
 }: ProfileCardProps) => {
   const arcBg = LeadershipPhotoBg;
@@ -53,8 +55,9 @@ const ProfileCard = ({
               style={{ padding: "8px" }}
             >
             {/* ACTUAL IMAGE */}
-            <OptimizedImage
-              src={image}
+            <CMSImage
+              imageData={image}
+              imageId={imageId}
               alt={name}
               width={160}
               height={160}
@@ -74,7 +77,7 @@ const ProfileCard = ({
                 group-hover:scale-[1.35]
               "
               onError={() => {
-                // Error handling is built into OptimizedImage
+                // Error handling is built into CMSImage
               }}
             />
           </div>

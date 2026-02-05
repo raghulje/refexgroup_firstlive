@@ -59,6 +59,7 @@ interface Business {
   title: string;
   description: string;
   image: any; // Can be string, object, or null - CMSImage will handle it
+  imageId?: number | string | null; // Store imageId for fallback
   link: string;
 }
 
@@ -124,6 +125,7 @@ export default function BusinessGrid() {
               title: card.title || '',
               description: card.description || '',
               image: imageData, // Pass the original image object/data structure or constructed URL
+              imageId: card.imageId || null, // Store imageId for fallback
               link: card.linkUrl || '#'
             };
           });
@@ -208,6 +210,7 @@ export default function BusinessGrid() {
                   <div className="w-full h-full group-hover:scale-110 transition-transform duration-500 ease-out" style={{ willChange: 'transform' }}>
                     <CMSImage
                       imageData={business.image}
+                      imageId={business.imageId} // Pass imageId as fallback
                       alt={business.title}
                       width={400}
                       height={256}
@@ -221,7 +224,8 @@ export default function BusinessGrid() {
                         if (process.env.NODE_ENV === 'development') {
                           console.error('Business card image failed to load:', {
                             title: business.title,
-                            imageData: business.image
+                            imageData: business.image,
+                            imageId: business.imageId
                           });
                         }
                       }}

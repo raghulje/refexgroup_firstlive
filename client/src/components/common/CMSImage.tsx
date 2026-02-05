@@ -2,7 +2,8 @@ import OptimizedImage, { OptimizedImageProps } from './OptimizedImage';
 import { getApiBaseUrl } from '../../config/env';
 
 interface CMSImageProps extends Omit<OptimizedImageProps, 'src'> {
-  imageData: any; // CMS image data (can be string, object, or number)
+  imageData: any; // CMS image data (can be string, object, number, or null)
+  imageId?: number | string | null; // Optional imageId if imageData is null but imageId exists
   getImagePath?: (imageData: any) => string; // Optional custom getImagePath function
   fallback?: string; // Fallback image URL
 }
@@ -14,12 +15,22 @@ interface CMSImageProps extends Omit<OptimizedImageProps, 'src'> {
  */
 export default function CMSImage({
   imageData,
+  imageId,
   getImagePath: customGetImagePath,
   fallback,
   ...optimizedImageProps
 }: CMSImageProps) {
   // Helper to resolve image path from CMS data
-  const resolveImagePath = (data: any): string => {
+  const resolveImagePath = (data: any, id?: number | string | null): string => {
+    // If data is null/undefined but imageId exists, construct URL from imageId
+    if ((!data || data === null || data === undefined) && id) {
+      const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+      if (!isNaN(numericId) && numericId > 0) {
+        const apiBase = getApiBaseUrl();
+        return `${apiBase}/uploads/media/${numericId}`;
+      }
+    }
+    
     if (!data || data === null || data === undefined) return fallback || '';
 
     // Use custom getImagePath if provided
@@ -139,7 +150,7 @@ export default function CMSImage({
     return fallback || '';
   };
 
-  const imageSrc = resolveImagePath(imageData);
+  const imageSrc = resolveImagePath(imageData, imageId);
 
   // Debug logging in development
   if (process.env.NODE_ENV === 'development' && !imageSrc && imageData) {
