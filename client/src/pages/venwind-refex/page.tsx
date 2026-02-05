@@ -153,7 +153,7 @@ const VenwindRefexPage = () => {
 
   if (loading) {
     return (
-      <MainLayout>
+      <MainLayout disableOverflowX={true}>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -167,12 +167,31 @@ const VenwindRefexPage = () => {
 
   return (
     <>
-    <MainLayout>
-      <HeroSection sectionData={pageSections['hero']} getImagePath={getImagePath} getSectionContent={getSectionContent} />
-      <StatsSection sectionData={pageSections['stats']} stats={stats} getImagePath={getImagePath} getSectionContent={getSectionContent} />
-      <UniqueSection sectionData={pageSections['unique']} features={features} getImagePath={getImagePath} getSectionContent={getSectionContent} />
-      <TechnicalSpecsSection sectionData={pageSections['technical-specs']} specs={specs} getImagePath={getImagePath} getSectionContent={getSectionContent} />
-      <CTASection sectionData={pageSections['cta']} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+      <style>{`
+        /* Override overflow-x-hidden for venwind page */
+        .venwind-page-wrapper {
+          overflow-x: visible !important;
+        }
+        /* Hide green scrollbar on venwind page */
+        .venwind-page-wrapper ::-webkit-scrollbar {
+          width: 0px;
+          background: transparent;
+        }
+        .venwind-page-wrapper ::-webkit-scrollbar-thumb {
+          background: transparent;
+        }
+        .venwind-page-wrapper ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+      `}</style>
+    <MainLayout disableOverflowX={true}>
+      <div className="venwind-page-wrapper">
+        <HeroSection sectionData={pageSections['hero']} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+        <StatsSection sectionData={pageSections['stats']} stats={stats} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+        <UniqueSection sectionData={pageSections['unique']} features={features} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+        <TechnicalSpecsSection sectionData={pageSections['technical-specs']} specs={specs} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+        <CTASection sectionData={pageSections['cta']} getImagePath={getImagePath} getSectionContent={getSectionContent} />
+      </div>
     </MainLayout>
       <Footer />
     </>

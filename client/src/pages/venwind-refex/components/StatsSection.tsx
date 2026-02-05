@@ -65,7 +65,7 @@ const StatCard = ({ value, suffix, description, delay = 0 }: StatCardProps) => {
         {value.includes('.') ? count.toFixed(1) : Math.floor(count)}
         <span className="text-gray-900">{suffix}</span>
       </div>
-      <h3 className="text-xs text-gray-600 leading-relaxed min-h-[60px]">
+      <h3 className="text-base text-gray-600 leading-relaxed min-h-[60px] font-normal">
         {description}
       </h3>
     </div>

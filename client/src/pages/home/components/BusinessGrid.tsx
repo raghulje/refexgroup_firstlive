@@ -3,23 +3,49 @@ import { Link } from 'react-router-dom';
 import { businessCardsService } from '../../../services/apiService';
 import { getApiBaseUrl } from '../../../config/env';
 
-// CSS for smooth hover effect without flickering - using direct :hover instead of group-hover
+// CSS for smooth hover effect without flickering - premium animation
 const businessCardButtonStyles = `
+  .business-button-inner {
+    transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1), 
+                padding-left 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                padding-right 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                padding-top 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                padding-bottom 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: width, padding;
+  }
   .business-button-inner:hover {
     width: auto !important;
-    padding-left: 1.5rem !important;
-    padding-right: 1.5rem !important;
+    min-width: 160px !important;
+    padding-left: 1.25rem !important;
+    padding-right: 2.75rem !important;
     padding-top: 0.625rem !important;
     padding-bottom: 0.625rem !important;
   }
+  .business-button-arrow {
+    transition: left 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                right 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                transform 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: left, right, transform, opacity;
+  }
   .business-button-inner:hover .business-button-arrow {
-    opacity: 0 !important;
-    visibility: hidden !important;
+    left: auto !important;
+    right: 0.75rem !important;
+    transform: translateY(-50%) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  .business-button-text {
+    transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                width 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                margin-right 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity, width, margin-right;
   }
   .business-button-inner:hover .business-button-text {
     opacity: 1 !important;
-    width: 110px !important;
-    margin-right: 0.5rem !important;
+    width: auto !important;
+    max-width: 110px !important;
+    margin-right: 0.75rem !important;
     display: inline-block !important;
   }
 `;
@@ -201,29 +227,24 @@ export default function BusinessGrid() {
                     >
                       <div
                         style={{
-                          marginTop: '-45px',
-                          transition: 'width 500ms cubic-bezier(0.4, 0, 0.2, 1), padding 500ms cubic-bezier(0.4, 0, 0.2, 1), height 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-                          willChange: 'width, padding, height'
+                          marginTop: '-45px'
                         }}
-                        className="business-button-inner relative inline-flex items-center justify-center gap-2 bg-[#7DC144] text-white font-semibold rounded-full w-12 h-12 overflow-hidden">
-                        {/* Arrow icon - always positioned, hidden on hover */}
+                        className="business-button-inner relative inline-flex items-center justify-start gap-2 bg-[#7DC144] text-white font-semibold rounded-full w-12 h-12 overflow-hidden">
+                        {/* Text - shown on hover */}
+                        <span
+                          className="business-button-text opacity-0 w-0 overflow-hidden whitespace-nowrap"
+                        >
+                          Explore More
+                        </span>
+                        {/* Arrow icon - centered initially, moves to right on hover */}
                         <i
-                          className="business-button-arrow ri-arrow-right-line text-lg flex-shrink-0 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 ease-out"
+                          className="business-button-arrow ri-arrow-right-line text-lg flex-shrink-0 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
                           style={{
                             pointerEvents: 'none',
                             zIndex: 2
                           }}
                           aria-hidden="true"
                         ></i>
-                        {/* Text - shown on hover */}
-                        <span
-                          className="business-button-text opacity-0 w-0 overflow-hidden whitespace-nowrap transition-all duration-500 ease-out"
-                          style={{
-                            willChange: 'opacity, width, margin-right'
-                          }}
-                        >
-                          Explore More
-                        </span>
                       </div>
                     </Link>
                   </div>
