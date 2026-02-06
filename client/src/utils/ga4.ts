@@ -1,6 +1,6 @@
 import ReactGA from 'react-ga4';
 
-const GA_MEASUREMENT_ID = 'G-WHLGZNHDN3';
+const GA_MEASUREMENT_ID = 'G-PELQP7E4ZJ';
 
 // Track if GA4 has been initialized to prevent duplicate initialization
 let isInitialized = false;

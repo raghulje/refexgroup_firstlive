@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import firstImage from '../../../../public/first.jpg';
+import firstImage from '../../../../public/Welcome.jpg';
 
 interface WelcomeModalProps {
   imageUrl?: string;
