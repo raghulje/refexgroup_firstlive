@@ -18,9 +18,25 @@ const apiUrl = getApiBaseUrl();
 console.log('API Base URL:', apiUrl);
 console.log('VITE_API_URL env var:', import.meta.env.VITE_API_URL);
 
+const isDev = import.meta.env.DEV;
+const pendingControllers = new Set<AbortController>();
+
+const buildRequestKey = (config: any): string => {
+    const method = (config.method || 'get').toUpperCase();
+    const base = config.baseURL || '';
+    const url = config.url || '';
+    return `${method}::${base}${url}`;
+};
+
+export const cancelAllApiRequests = (): void => {
+    pendingControllers.forEach((controller) => controller.abort());
+    pendingControllers.clear();
+};
+
 // Create axios instance
 const api = axios.create({
     baseURL: apiUrl,
+    timeout: 15000,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -29,6 +45,12 @@ const api = axios.create({
 // Add request interceptor for auth token and URL correction
 api.interceptors.request.use(
     (config) => {
+        // Attach abort signal to every request so route changes can cancel in-flight calls.
+        const controller = new AbortController();
+        config.signal = controller.signal;
+        (config as any).__abortController = controller;
+        pendingControllers.add(controller);
+
         // Fix port 5000 to 3002 if present in the URL (multiple checks)
         const originalUrl = config.url || '';
         const originalBaseURL = config.baseURL || '';
@@ -62,8 +84,10 @@ api.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
         
-        // Log final URL for debugging
-        console.log('📡 Making request to:', (config.baseURL || '') + (config.url || ''));
+        if (isDev) {
+            console.log('📡 Making request to:', (config.baseURL || '') + (config.url || ''));
+        }
+        (config as any).__requestKey = buildRequestKey(config);
         
         return config;
     },
@@ -74,8 +98,27 @@ api.interceptors.request.use(
 
 // Add response interceptor for error handling
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        const controller = (response.config as any).__abortController as AbortController | undefined;
+        if (controller) {
+            pendingControllers.delete(controller);
+        }
+        return response;
+    },
     (error) => {
+        const controller = error?.config?.__abortController as AbortController | undefined;
+        if (controller) {
+            pendingControllers.delete(controller);
+        }
+
+        const isCanceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError';
+        if (!isCanceled) {
+            const status = error?.response?.status ?? 'NO_RESPONSE';
+            const message = error?.message ?? 'Unknown error';
+            const requestUrl = `${error?.config?.baseURL || ''}${error?.config?.url || ''}`;
+            console.error('API request failed:', { message, status, url: requestUrl });
+        }
+
         if (error.response && error.response.status === 401) {
             // Handle unauthorized access - clear tokens and redirect to login
             localStorage.removeItem('admin_token');

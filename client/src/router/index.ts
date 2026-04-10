@@ -27,13 +27,15 @@ export function AppRoutes() {
   useEffect(() => {
     window.REACT_APP_NAVIGATE = navigate;
     navigateResolver(window.REACT_APP_NAVIGATE);
-  });
+  }, [navigate]);
   
   // Debug: Log current route
   useEffect(() => {
-    console.log('📍 Current route:', location.pathname);
-    console.log('📍 Available routes count:', routes.length);
-    console.log('📍 Gallery year route exists:', routes.some(r => r.path === '/gallery-:year'));
+    if (import.meta.env.DEV) {
+      console.log('📍 Current route:', location.pathname);
+      console.log('📍 Available routes count:', routes.length);
+      console.log('📍 Gallery year route exists:', routes.some(r => r.path === '/gallery-:year'));
+    }
   }, [location.pathname]);
   
   return element;

@@ -9,9 +9,11 @@
  */
 export const getApiBaseUrl = (): string => {
     const apiUrl = import.meta.env.VITE_API_URL;
+    const isDeployedHost = typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const isLocalApiUrl = typeof apiUrl === 'string' && (apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1'));
 
     // If VITE_API_URL is explicitly set, validate and use it (but remove /api/v1 suffix if present)
-    if (apiUrl && apiUrl.trim() !== '') {
+    if (apiUrl && apiUrl.trim() !== '' && !(isDeployedHost && isLocalApiUrl)) {
         const trimmedUrl = apiUrl.trim();
         // Check if it's malformed (starts with :)
         if (trimmedUrl.startsWith(':')) {
@@ -49,9 +51,11 @@ export const getApiBaseUrl = (): string => {
  */
 export const getApiUrl = (): string => {
     const apiUrl = import.meta.env.VITE_API_URL;
+    const isDeployedHost = typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const isLocalApiUrl = typeof apiUrl === 'string' && (apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1'));
     
     // If VITE_API_URL is explicitly set, validate and use it
-    if (apiUrl && apiUrl.trim() !== '') {
+    if (apiUrl && apiUrl.trim() !== '' && !(isDeployedHost && isLocalApiUrl)) {
         const trimmedUrl = apiUrl.trim();
         
         // Check if it starts with : (like :5000), it's malformed - ignore it

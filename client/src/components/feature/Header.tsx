@@ -1,8 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { NAV_LINKS } from '../../data/navigation';
-import { navigationService, globalSettingsService } from '../../services/apiService';
 import { getApiBaseUrl } from '../../config/env';
+import { getCachedGlobalSettings, getCachedNavigation } from '../../services/siteDataCache';
+
+const HEADER_CACHE_TTL_MS = 30000;
+let headerCache: {
+  ts: number;
+  navLinks: any[];
+  headerLogo: string;
+  ctaButton: { label: string; url: string };
+} | null = null;
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -109,6 +117,14 @@ export default function Header() {
         return;
       }
 
+      // Fast-path: reuse recent header payload to avoid bursts on rapid route switches
+      if (headerCache && (Date.now() - headerCache.ts) < HEADER_CACHE_TTL_MS) {
+        setNavLinks(headerCache.navLinks);
+        setHeaderLogo(headerCache.headerLogo);
+        setCtaButton(headerCache.ctaButton);
+        return;
+      }
+
       try {
         fetchingRef.current = true;
         setLoading(true);
@@ -116,7 +132,7 @@ export default function Header() {
         // Fetch navigation - this is critical, don't let it fail
         let navData: any[] = [];
         try {
-          navData = await navigationService.getByLocation('header');
+          navData = await getCachedNavigation();
         } catch (navError) {
           console.error('Error fetching navigation:', navError);
           // If navigation fails, use fallback
@@ -132,7 +148,7 @@ export default function Header() {
         // Fetch header settings - make this non-blocking
         let settings: any = null;
         try {
-          settings = await globalSettingsService.getAll();
+          settings = await getCachedGlobalSettings();
         } catch (settingsError) {
           console.warn('Error fetching global settings (non-critical):', settingsError);
           // Continue without settings - navigation will still work
@@ -173,6 +189,8 @@ export default function Header() {
         });
 
         // Handle logo and CTA button from settings (non-blocking)
+        let resolvedHeaderLogo = headerLogo;
+        let resolvedCtaButton = ctaButton;
         if (settings) {
           // Logo
           if (settings.logo_main_id) {
@@ -183,6 +201,7 @@ export default function Header() {
                 const apiBase = getApiBaseUrl();
                 const newLogo = media.filePath.startsWith('/uploads/') ? `${apiBase}${media.filePath}` : media.filePath;
                 setHeaderLogo((prevLogo) => prevLogo !== newLogo ? newLogo : prevLogo);
+                resolvedHeaderLogo = newLogo;
               }
             } catch (e) {
               console.error('Error fetching logo:', e);
@@ -198,8 +217,16 @@ export default function Header() {
             setCtaButton((prevCta) => {
               return prevCta.label !== newCta.label || prevCta.url !== newCta.url ? newCta : prevCta;
             });
+            resolvedCtaButton = newCta;
           }
         }
+
+        headerCache = {
+          ts: Date.now(),
+          navLinks: finalNavLinks,
+          headerLogo: resolvedHeaderLogo,
+          ctaButton: resolvedCtaButton
+        };
       } catch (error) {
         console.error('Unexpected error fetching header data:', error);
         // Only fallback if navigation fetch failed (handled above)

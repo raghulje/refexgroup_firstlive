@@ -155,13 +155,15 @@ async function createTransporter(verifyConnection = false) {
   const smtpUser = process.env.SMTP_USER || config.auth.user;
   const smtpPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD || config.auth.pass;
 
+  const smtpDebugEnabled = process.env.SMTP_DEBUG === 'true';
+
   // Zoho SMTP configuration with debug enabled
   const transporterConfig = {
     host: smtpHost,
     port: smtpPort,
     secure: true,
-    logger: true,
-    debug: true,
+    logger: smtpDebugEnabled,
+    debug: smtpDebugEnabled,
     auth: smtpUser ? {
       user: smtpUser,
       pass: smtpPass

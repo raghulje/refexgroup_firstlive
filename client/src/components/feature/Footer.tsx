@@ -7,8 +7,23 @@ import FacebookIcon from '../../pages/svg/footer/facebook.svg';
 import XIcon from '../../pages/svg/footer/x.svg';
 import YoutubeIcon from '../../pages/svg/footer/youtube.svg';
 import InstagramIcon from '../../pages/svg/footer/instagram.svg';
-import { footerService, socialLinksService, globalSettingsService } from '../../services/apiService';
 import { getApiBaseUrl } from '../../config/env';
+import { getCachedFooterSections, getCachedGlobalSettings, getCachedSocialLinks } from '../../services/siteDataCache';
+
+const FOOTER_CACHE_TTL_MS = 30000;
+let footerCache: {
+  ts: number;
+  businessLinks: any[];
+  quickLinks: any[];
+  otherLinks: any[];
+  socialLinks: any[];
+  footerLogo: string;
+  copyrightText: string;
+  complaintPhone: string;
+  complaintEmail: string;
+  privacyPolicyUrl: string;
+  termsOfUseUrl: string;
+} | null = null;
 
 export default function Footer() {
   const [businessLinks, setBusinessLinks] = useState([
@@ -93,11 +108,38 @@ export default function Footer() {
         return;
       }
 
+      // Fast-path: reuse recent footer payload to avoid bursts on rapid route switches
+      if (footerCache && (Date.now() - footerCache.ts) < FOOTER_CACHE_TTL_MS) {
+        setBusinessLinks(footerCache.businessLinks);
+        setQuickLinks(footerCache.quickLinks);
+        setOtherLinks(footerCache.otherLinks);
+        setSocialLinks(footerCache.socialLinks);
+        setFooterLogo(footerCache.footerLogo);
+        setCopyrightText(footerCache.copyrightText);
+        setComplaintPhone(footerCache.complaintPhone);
+        setComplaintEmail(footerCache.complaintEmail);
+        setPrivacyPolicyUrl(footerCache.privacyPolicyUrl);
+        setTermsOfUseUrl(footerCache.termsOfUseUrl);
+        return;
+      }
+
       try {
         fetchingRef.current = true;
         
+        // Track resolved values for cache snapshot
+        let resolvedBusinessLinks = businessLinks;
+        let resolvedQuickLinks = quickLinks;
+        let resolvedOtherLinks = otherLinks;
+        let resolvedSocialLinks = socialLinks;
+        let resolvedFooterLogo = footerLogo;
+        let resolvedCopyright = copyrightText;
+        let resolvedComplaintPhone = complaintPhone;
+        let resolvedComplaintEmail = complaintEmail;
+        let resolvedPrivacyPolicy = privacyPolicyUrl;
+        let resolvedTermsOfUse = termsOfUseUrl;
+
         // Fetch footer sections
-        const sectionsData = await footerService.getAll();
+        const sectionsData = await getCachedFooterSections();
         const activeSections = sectionsData
           .filter((section: any) => section.isActive)
           .sort((a: any, b: any) => (a.orderIndex || 0) - (b.orderIndex || 0));
@@ -117,6 +159,7 @@ export default function Footer() {
                 const newStr = JSON.stringify(transformedLinks);
                 return prevStr === newStr ? prevLinks : transformedLinks;
               });
+              resolvedBusinessLinks = transformedLinks;
             }
           } else if (section.sectionType === 'quick-links') {
             if (transformedLinks.length > 0) {
@@ -125,6 +168,7 @@ export default function Footer() {
                 const newStr = JSON.stringify(transformedLinks);
                 return prevStr === newStr ? prevLinks : transformedLinks;
               });
+              resolvedQuickLinks = transformedLinks;
             }
           } else if (section.sectionType === 'other-links') {
             if (transformedLinks.length > 0) {
@@ -133,12 +177,13 @@ export default function Footer() {
                 const newStr = JSON.stringify(transformedLinks);
                 return prevStr === newStr ? prevLinks : transformedLinks;
               });
+              resolvedOtherLinks = transformedLinks;
             }
           }
         });
 
         // Fetch social links
-        const socialData = await socialLinksService.getAll();
+        const socialData = await getCachedSocialLinks();
         const activeSocialLinks = socialData
           .filter((link: any) => link.isActive)
           .sort((a: any, b: any) => (a.orderIndex || 0) - (b.orderIndex || 0))
@@ -158,10 +203,11 @@ export default function Footer() {
             const newStr = JSON.stringify(activeSocialLinks);
             return prevStr === newStr ? prevLinks : activeSocialLinks;
           });
+          resolvedSocialLinks = activeSocialLinks;
         }
 
         // Fetch footer settings
-        const settings = await globalSettingsService.getAll();
+        const settings = await getCachedGlobalSettings();
         if (settings) {
           // Logo
           if (settings.logo_footer_id) {
@@ -172,6 +218,7 @@ export default function Footer() {
                 const apiBase = getApiBaseUrl();
                 const newLogo = media.filePath.startsWith('/uploads/') ? `${apiBase}${media.filePath}` : media.filePath;
                 setFooterLogo((prevLogo) => prevLogo !== newLogo ? newLogo : prevLogo);
+                resolvedFooterLogo = newLogo;
               }
             } catch (e) {
               console.error('Error fetching footer logo:', e);
@@ -181,24 +228,43 @@ export default function Footer() {
           // Copyright
           if (settings.copyright_text) {
             setCopyrightText((prevText) => prevText !== settings.copyright_text ? settings.copyright_text : prevText);
+            resolvedCopyright = settings.copyright_text;
           }
 
           // Complaint contact
           if (settings.footer_complaint_phone) {
             setComplaintPhone((prevPhone) => prevPhone !== settings.footer_complaint_phone ? settings.footer_complaint_phone : prevPhone);
+            resolvedComplaintPhone = settings.footer_complaint_phone;
           }
           if (settings.footer_complaint_email) {
             setComplaintEmail((prevEmail) => prevEmail !== settings.footer_complaint_email ? settings.footer_complaint_email : prevEmail);
+            resolvedComplaintEmail = settings.footer_complaint_email;
           }
 
           // Legal links
           if (settings.footer_privacy_policy_url) {
             setPrivacyPolicyUrl((prevUrl) => prevUrl !== settings.footer_privacy_policy_url ? settings.footer_privacy_policy_url : prevUrl);
+            resolvedPrivacyPolicy = settings.footer_privacy_policy_url;
           }
           if (settings.footer_terms_of_use_url) {
             setTermsOfUseUrl((prevUrl) => prevUrl !== settings.footer_terms_of_use_url ? settings.footer_terms_of_use_url : prevUrl);
+            resolvedTermsOfUse = settings.footer_terms_of_use_url;
           }
         }
+
+        footerCache = {
+          ts: Date.now(),
+          businessLinks: resolvedBusinessLinks,
+          quickLinks: resolvedQuickLinks,
+          otherLinks: resolvedOtherLinks,
+          socialLinks: resolvedSocialLinks,
+          footerLogo: resolvedFooterLogo,
+          copyrightText: resolvedCopyright,
+          complaintPhone: resolvedComplaintPhone,
+          complaintEmail: resolvedComplaintEmail,
+          privacyPolicyUrl: resolvedPrivacyPolicy,
+          termsOfUseUrl: resolvedTermsOfUse
+        };
       } catch (error) {
         console.error('Error fetching footer data:', error);
         // Fallback to hardcoded data (already set as initial state)
