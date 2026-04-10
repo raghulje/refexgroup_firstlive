@@ -10,7 +10,7 @@ exports.getEmailSettings = async (req, res) => {
         // If no settings exist, create default
         if (!settings) {
             settings = await EmailSettings.create({
-                smtpHost: 'smtp.gmail.com',
+                smtpHost: 'smtppro.zoho.in',
                 smtpPort: 587,
                 smtpSecure: false,
                 smtpUser: '',
@@ -183,13 +183,13 @@ exports.testEmailSettings = async (req, res) => {
             console.error('SMTP connection verification failed:', verifyError);
             let errorMessage = verifyError.message || 'Unable to connect to SMTP server.';
             
-            // Provide specific guidance for common Gmail errors
+            // Provide specific guidance for common SMTP auth errors
             if (errorMessage.includes('Invalid login') || errorMessage.includes('authentication') || errorMessage.includes('EAUTH')) {
-                errorMessage = 'Authentication failed. For Gmail, please ensure:\n1. 2-Step Verification is enabled\n2. You are using an App-Specific Password (not your regular password)\n3. The app password is correct';
+                errorMessage = 'Authentication failed. For Zoho, please ensure:\n1. SMTP Username is correct\n2. You are using an SMTP Application-Specific Password\n3. Outgoing server is smtppro.zoho.in and port is 587 (TLS) or 465 (SSL)';
             } else if (errorMessage.includes('Insufficient permissions') || errorMessage.includes('permission')) {
-                errorMessage = 'Insufficient permissions. For Gmail:\n1. Enable 2-Step Verification on your Google account\n2. Generate an App-Specific Password at: https://myaccount.google.com/apppasswords\n3. Use that 16-character password (no spaces) in the SMTP Password field';
+                errorMessage = 'Insufficient permissions. For Zoho:\n1. Generate an SMTP Application-Specific Password in Zoho Mail\n2. Use that password in SMTP Password\n3. Confirm SMTP access is enabled for the mailbox';
             } else if (errorMessage.includes('connection') || errorMessage.includes('ECONNREFUSED')) {
-                errorMessage = 'Cannot connect to SMTP server. Please verify:\n1. SMTP Host: smtp.gmail.com\n2. SMTP Port: 587 (or 465 for SSL)\n3. SSL/TLS checkbox: Unchecked for port 587, Checked for port 465';
+                errorMessage = 'Cannot connect to SMTP server. Please verify:\n1. SMTP Host: smtppro.zoho.in\n2. SMTP Port: 587 (TLS) or 465 (SSL)\n3. SSL/TLS checkbox: Unchecked for port 587, Checked for port 465';
             }
             
             return res.status(400).json({
@@ -223,13 +223,13 @@ exports.testEmailSettings = async (req, res) => {
             console.error('Error sending test email:', sendError);
             let errorMessage = sendError.message || 'Unknown error occurred while sending email';
             
-            // Provide specific guidance for common Gmail errors
+            // Provide specific guidance for common SMTP auth errors
             if (errorMessage.includes('Insufficient permissions') || errorMessage.includes('permission')) {
-                errorMessage = 'Insufficient permissions. For Gmail:\n1. Enable 2-Step Verification on your Google account\n2. Generate an App-Specific Password at: https://myaccount.google.com/apppasswords\n3. Use that 16-character password (no spaces) in the SMTP Password field\n4. Make sure you selected "Mail" as the app type when generating the password';
+                errorMessage = 'Insufficient permissions. For Zoho:\n1. Generate an SMTP Application-Specific Password\n2. Use the app-specific password in SMTP Password\n3. Confirm SMTP is enabled for your mailbox';
             } else if (errorMessage.includes('Invalid login') || errorMessage.includes('authentication') || errorMessage.includes('EAUTH')) {
-                errorMessage = 'Authentication failed. For Gmail:\n1. 2-Step Verification must be enabled\n2. You must use an App-Specific Password (not your regular Gmail password)\n3. The app password must be correct (16 characters, no spaces)\n4. Verify your SMTP Username matches your Gmail address exactly';
+                errorMessage = 'Authentication failed. For Zoho:\n1. Use your full email as SMTP username\n2. Use an SMTP Application-Specific Password (not mailbox password)\n3. Verify host smtppro.zoho.in and port/security match';
             } else if (errorMessage.includes('connection') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ETIMEDOUT')) {
-                errorMessage = 'Connection failed. Please verify:\n1. SMTP Host: smtp.gmail.com\n2. SMTP Port: 587 (TLS) or 465 (SSL)\n3. SSL/TLS checkbox: Unchecked for port 587, Checked for port 465\n4. Your firewall/network allows SMTP connections';
+                errorMessage = 'Connection failed. Please verify:\n1. SMTP Host: smtppro.zoho.in\n2. SMTP Port: 587 (TLS) or 465 (SSL)\n3. SSL/TLS checkbox: Unchecked for port 587, Checked for port 465\n4. Your firewall/network allows SMTP connections';
             }
             
             return res.status(500).json({

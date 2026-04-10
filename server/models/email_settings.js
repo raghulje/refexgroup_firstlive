@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
         smtpHost: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue: 'smtp.gmail.com'
+            defaultValue: 'smtppro.zoho.in'
         },
         smtpPort: {
             type: DataTypes.INTEGER,

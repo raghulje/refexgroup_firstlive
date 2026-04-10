@@ -1,6 +1,8 @@
 const { body, validationResult } = require('express-validator');
 const emailService = require('../services/emailService');
 const status = require('../helpers/response');
+const { getRequestMeta, phoneToDigitsOnly } = require('../helpers/requestMeta');
+const { sendToKissflowWebhook } = require('../helpers/kissflowWebhook');
 
 function asyncHandler(fn) {
   return (req, res, next) => {
@@ -55,25 +57,44 @@ exports.submit = asyncHandler(async (req, res) => {
   }
 
   try {
-    const { name, email, phone, enquiringFor, message } = req.body;
+    const { name, email, phone, enquiringFor, message, company } = req.body;
+    const phoneDigits = phoneToDigitsOnly(phone || '');
+    const meta = getRequestMeta(req);
 
-    // Send email
-    const emailResult = await emailService.sendContactFormEmail({
+    // Kissflow webhook: queue and send asynchronously (do not await)
+    const webhookData = {
       name,
       email,
-      phone: phone || '',
-      enquiringFor: enquiringFor || 'General',
-      message
+      phone: phoneDigits,
+      Phone_Number: phoneDigits,
+      // Standard payload expects `company` to always exist
+      company: company ?? '',
+      message,
+      ...(enquiringFor && { enquiringFor }),
+      ...meta
+    };
+    sendToKissflowWebhook('Refex Group', 'Contact form', webhookData);
+
+    // Send email in background (best-effort), so API response is not blocked by SMTP delays.
+    setImmediate(async () => {
+      try {
+        await emailService.sendContactFormEmail({
+          name,
+          email,
+          phone: phone || '',
+          enquiringFor: enquiringFor || 'General',
+          message
+        });
+      } catch (emailError) {
+        console.error('❌ RefexGroup contact email failed (continuing to Kissflow):', emailError?.message || emailError);
+      }
     });
 
-    if (emailResult.success) {
-      return status.responseStatus(res, 200, "Contact form submitted successfully", {
-        message: 'Thank you for contacting us. We will get back to you soon.',
-        messageId: emailResult.messageId
-      });
-    } else {
-      throw new Error('Failed to send email');
-    }
+    // Always return success (so UI doesn't show error) when validation passed and webhook was queued.
+    return status.responseStatus(res, 200, "Contact form submitted successfully", {
+      message: 'Thank you for contacting us. We will get back to you soon.',
+      // Email is sent asynchronously; response should not wait for SMTP completion.
+    });
   } catch (error) {
     console.error('❌ Contact form submission error:', error);
     

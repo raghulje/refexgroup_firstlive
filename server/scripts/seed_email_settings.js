@@ -16,7 +16,7 @@ async function seedEmailSettings() {
       },
       {
         key: 'smtp_host',
-        value: process.env.SMTP_HOST || 'smtp.gmail.com',
+        value: process.env.SMTP_HOST || 'smtppro.zoho.in',
         valueType: 'string',
         description: 'SMTP server hostname'
       },
@@ -40,9 +40,9 @@ async function seedEmailSettings() {
       },
       {
         key: 'smtp_password',
-        value: process.env.SMTP_PASSWORD || '',
+        value: process.env.SMTP_PASSWORD || process.env.SMTP_PASS || '',
         valueType: 'string',
-        description: 'SMTP password (app password for Gmail)'
+        description: 'SMTP password (application-specific password)'
       },
       {
         key: 'smtp_from_email',
@@ -81,7 +81,7 @@ async function seedEmailSettings() {
     console.log("\n📝 Note: Update the following settings in Global Settings CMS:");
     console.log("   - contact_form_email: Email to receive contact form submissions");
     console.log("   - smtp_user: Your SMTP email/username");
-    console.log("   - smtp_password: Your SMTP password (use app password for Gmail)");
+    console.log("   - smtp_password: Your SMTP password (use SMTP application-specific password)");
     console.log("   - smtp_from_email: Email address to send from");
     console.log("\n🔒 For production, update these values in the CMS or set environment variables.");
 

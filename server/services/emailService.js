@@ -75,20 +75,20 @@ async function getEmailConfig() {
     });
 
     if (emailSettings && emailSettings.smtpUser && emailSettings.smtpPassword) {
-      // Get contact email (from section or use contactEmail from EmailSettings)
+      // Prefer Email Settings (CMS) for recipient; fallback to section/global only if CMS fields are empty
       const contactEmailFromSection = await getContactEmail();
 
       return {
-        host: emailSettings.smtpHost || 'smtp.gmail.com',
-        port: emailSettings.smtpPort || 587,
-        secure: emailSettings.smtpSecure || false,
+        host: emailSettings.smtpHost || 'smtp.zoho.in',
+        port: emailSettings.smtpPort || 465,
+        secure: emailSettings.smtpSecure === true,
         auth: {
           user: emailSettings.smtpUser,
           pass: emailSettings.smtpPassword
         },
         from: emailSettings.fromEmail || emailSettings.smtpUser,
         fromName: emailSettings.fromName || 'Refex Group Contact Form',
-        contactEmail: contactEmailFromSection || emailSettings.contactEmail || emailSettings.receivingEmail || emailSettings.smtpUser
+        contactEmail: emailSettings.contactEmail || emailSettings.receivingEmail || contactEmailFromSection || emailSettings.smtpUser
       };
     }
 
@@ -115,12 +115,12 @@ async function getEmailConfig() {
     const contactEmail = await getContactEmail();
 
     return {
-      host: settingsObj.smtp_host || process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: settingsObj.smtp_port || Number(process.env.SMTP_PORT) || 587,
-      secure: settingsObj.smtp_secure === true || settingsObj.smtp_secure === 'true' || process.env.SMTP_SECURE === 'true' || false,
+      host: settingsObj.smtp_host || process.env.SMTP_HOST || 'smtp.zoho.in',
+      port: settingsObj.smtp_port || Number(process.env.SMTP_PORT) || 465,
+      secure: settingsObj.smtp_secure === true || settingsObj.smtp_secure === 'true' || process.env.SMTP_SECURE === 'true' || true,
       auth: {
         user: settingsObj.smtp_user || process.env.SMTP_USER || '',
-        pass: settingsObj.smtp_password || process.env.SMTP_PASSWORD || ''
+        pass: settingsObj.smtp_password || process.env.SMTP_PASSWORD || process.env.SMTP_PASS || ''
       },
       from: settingsObj.smtp_from_email || process.env.SMTP_FROM_EMAIL || settingsObj.smtp_user || process.env.SMTP_USER || '',
       fromName: settingsObj.smtp_from_name || process.env.SMTP_FROM_NAME || 'Refex Group Contact Form',
@@ -130,12 +130,12 @@ async function getEmailConfig() {
     console.error('Error getting email config:', error);
     // Fallback to environment variables
     return {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true' || false,
+      host: process.env.SMTP_HOST || 'smtp.zoho.in',
+      port: Number(process.env.SMTP_PORT) || 465,
+      secure: process.env.SMTP_SECURE === 'true' || true,
       auth: {
         user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASSWORD || ''
+        pass: process.env.SMTP_PASSWORD || process.env.SMTP_PASS || ''
       },
       from: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || '',
       fromName: process.env.SMTP_FROM_NAME || 'Refex Group Contact Form',
@@ -147,45 +147,49 @@ async function getEmailConfig() {
 /**
  * Create email transporter
  */
-async function createTransporter() {
+async function createTransporter(verifyConnection = false) {
   const config = await getEmailConfig();
-  
-  // Configure SSL/TLS based on port (same fix as in emailSettingsController)
+
+  const smtpHost = process.env.SMTP_HOST || 'smtp.zoho.in';
+  const smtpPort = Number(process.env.SMTP_PORT) || 465;
+  const smtpUser = process.env.SMTP_USER || config.auth.user;
+  const smtpPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD || config.auth.pass;
+
+  // Zoho SMTP configuration with debug enabled
   const transporterConfig = {
-    host: config.host,
-    port: config.port,
-    auth: config.auth.user ? {
-      user: config.auth.user,
-      pass: config.auth.pass
+    host: smtpHost,
+    port: smtpPort,
+    secure: true,
+    logger: true,
+    debug: true,
+    auth: smtpUser ? {
+      user: smtpUser,
+      pass: smtpPass
     } : undefined,
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 10000
   };
 
-  // Configure SSL/TLS based on port to prevent "wrong version number" error
-  if (config.port === 465) {
-    // Port 465 uses SSL (implicit SSL)
-    transporterConfig.secure = true;
-  } else if (config.port === 587) {
-    // Port 587 uses STARTTLS (explicit TLS upgrade, NOT SSL)
-    transporterConfig.secure = false;
-    transporterConfig.requireTLS = true;
-    transporterConfig.tls = {
-      rejectUnauthorized: false
-    };
-  } else {
-    // For other ports, use the secure setting
-    transporterConfig.secure = config.secure || false;
-    if (!transporterConfig.secure && config.port !== 25) {
-      transporterConfig.requireTLS = true;
+  const transporter = nodemailer.createTransport(transporterConfig);
+
+  if (verifyConnection) {
+    try {
+      await transporter.verify();
+      console.log('✅ SMTP transporter verified successfully');
+    } catch (verifyError) {
+      console.error('❌ SMTP transporter verification failed:', verifyError.message);
+      if (verifyError.code === 'EAUTH' || /auth|invalid login/i.test(verifyError.message || '')) {
+        throw new Error('SMTP authentication failed for Zoho. Verify SMTP_USER and SMTP_PASS (app-specific password).');
+      }
+      if (/ECONNREFUSED|ETIMEDOUT|connection/i.test(verifyError.message || '')) {
+        throw new Error('Unable to connect to Zoho SMTP. Verify SMTP host, port, and network access.');
+      }
+      throw new Error(`SMTP verification failed: ${verifyError.message || 'Unknown SMTP error'}`);
     }
-    transporterConfig.tls = {
-      rejectUnauthorized: false
-    };
   }
-  
-  return nodemailer.createTransport(transporterConfig);
+
+  return transporter;
 }
 
 /**
@@ -204,26 +208,8 @@ async function sendContactFormEmail(formData) {
       throw new Error('SMTP credentials not configured. Please configure SMTP settings in the Email Settings CMS.');
     }
 
-    const transporter = await createTransporter();
+    const transporter = await createTransporter(false);
     
-    // Verify connection before sending
-    try {
-      await transporter.verify();
-    } catch (verifyError) {
-      console.error('SMTP connection verification failed:', verifyError);
-      let errorMessage = verifyError.message || 'Unable to connect to SMTP server.';
-      
-      if (errorMessage.includes('Invalid login') || errorMessage.includes('authentication') || errorMessage.includes('EAUTH')) {
-        errorMessage = 'SMTP authentication failed. Please check your SMTP username and password in Email Settings. For Gmail, use an App-Specific Password.';
-      } else if (errorMessage.includes('Insufficient permissions') || errorMessage.includes('permission')) {
-        errorMessage = 'Insufficient permissions. For Gmail with 2FA enabled, you must use an App-Specific Password. Generate one at: https://myaccount.google.com/apppasswords';
-      } else if (errorMessage.includes('connection') || errorMessage.includes('ECONNREFUSED')) {
-        errorMessage = 'Cannot connect to SMTP server. Please check your SMTP Host and Port settings in Email Settings.';
-      }
-      
-      throw new Error(errorMessage);
-    }
-
     // Email subject
     const subject = `New Contact Form Submission - ${formData.enquiringFor || 'General Inquiry'}`;
 
@@ -335,7 +321,7 @@ Submitted on: ${new Date().toLocaleString()}
 
     // Send email
     const mailOptions = {
-      from: `"${config.fromName}" <${config.from}>`,
+      from: `"${config.fromName || 'Refex Support'}" <${process.env.SMTP_USER || config.from}>`,
       to: config.contactEmail,
       replyTo: formData.email || config.from,
       subject: subject,
@@ -353,9 +339,9 @@ Submitted on: ${new Date().toLocaleString()}
     let errorMessage = error.message || 'Failed to send email';
     
     if (errorMessage.includes('Invalid login') || errorMessage.includes('authentication') || errorMessage.includes('EAUTH')) {
-      errorMessage = 'SMTP authentication failed. Please check your email settings in the CMS. For Gmail, use an App-Specific Password.';
+      errorMessage = 'SMTP authentication failed. Please verify Zoho SMTP username and app-specific password.';
     } else if (errorMessage.includes('Insufficient permissions') || errorMessage.includes('permission')) {
-      errorMessage = 'Insufficient permissions. For Gmail with 2FA enabled, you must use an App-Specific Password. Generate one at: https://myaccount.google.com/apppasswords';
+      errorMessage = 'SMTP permission denied. Ensure Zoho SMTP app-specific password is valid and SMTP is enabled.';
     } else if (errorMessage.includes('connection') || errorMessage.includes('ECONNREFUSED')) {
       errorMessage = 'Cannot connect to SMTP server. Please check your SMTP Host and Port settings in Email Settings CMS.';
     } else if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT')) {
@@ -372,14 +358,12 @@ Submitted on: ${new Date().toLocaleString()}
 async function testEmailConfig() {
   try {
     const config = await getEmailConfig();
-    const transporter = await createTransporter();
+    const transporter = await createTransporter(true);
 
     if (!config.auth.user || !config.auth.pass) {
       return { success: false, error: 'SMTP credentials not configured' };
     }
 
-    // Verify connection
-    await transporter.verify();
     return { success: true, message: 'Email configuration is valid' };
   } catch (error) {
     console.error('Email configuration test failed:', error);
