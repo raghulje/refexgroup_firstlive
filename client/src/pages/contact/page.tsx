@@ -18,7 +18,6 @@ export default function ContactPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string>('');
   const [pageSections, setPageSections] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
@@ -119,7 +118,6 @@ export default function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus('idle');
-    setErrorMessage('');
 
     try {
       const result = await contactFormService.submit({
@@ -139,22 +137,12 @@ export default function ContactPage() {
           enquiringFor: 'Sales',
           message: '',
         });
-        setErrorMessage('');
       } else {
         setSubmitStatus('error');
-        setErrorMessage('Sorry, there was an error sending your message. Please try again.');
       }
     } catch (error: any) {
       console.error('Contact form submission error:', error);
       setSubmitStatus('error');
-      
-      if (error.response?.data?.errors?.length > 0) {
-        setErrorMessage(error.response.data.errors[0].msg);
-      } else if (error.response?.data?.error) {
-        setErrorMessage(error.response.data.error);
-      } else {
-        setErrorMessage('Sorry, there was an error sending your message. Please try again.');
-      }
     } finally {
       setIsSubmitting(false);
     }
@@ -308,8 +296,6 @@ export default function ContactPage() {
                           id="name"
                           name="name"
                           required
-                          minLength={2}
-                          maxLength={100}
                           value={formData.name}
                           onChange={handleChange}
                           className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all text-sm"
@@ -367,15 +353,14 @@ export default function ContactPage() {
                           id="message"
                           name="message"
                           required
-                          minLength={10}
-                          maxLength={2000}
                           rows={4}
                           value={formData.message}
                           onChange={handleChange}
+                          maxLength={500}
                           className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all resize-none text-sm"
                           placeholder="Your Message"
                         ></textarea>
-                        <p className="text-xs text-gray-500 mt-1">{formData.message.length}/2000 characters</p>
+                        <p className="text-xs text-gray-500 mt-1">{formData.message.length}/500 characters</p>
                       </div>
 
                       {submitStatus === 'success' && (
@@ -386,7 +371,7 @@ export default function ContactPage() {
 
                       {submitStatus === 'error' && (
                         <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md text-sm">
-                          {errorMessage || 'Sorry, there was an error sending your message. Please try again.'}
+                          Sorry, there was an error sending your message. Please try again.
                         </div>
                       )}
 
