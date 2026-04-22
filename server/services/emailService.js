@@ -354,6 +354,79 @@ Submitted on: ${new Date().toLocaleString()}
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Send auto-reply to the customer (best-effort).
+ * This should never throw in a way that breaks form submission;
+ * callers should invoke it asynchronously and handle errors.
+ */
+async function sendContactAutoReplyEmail(formData) {
+  const config = await getEmailConfig();
+
+  const customerEmail = formData?.email;
+  if (!customerEmail) {
+    throw new Error('Customer email not provided');
+  }
+
+  if (!config.auth.user || !config.auth.pass) {
+    throw new Error('SMTP credentials not configured. Please configure SMTP settings in the Email Settings CMS.');
+  }
+
+  const transporter = await createTransporter(false);
+  const subject = 'We received your enquiry - Refex Group';
+
+  const safeName = escapeHtml(formData?.name || 'there');
+  const safeEnquiry = escapeHtml(formData?.enquiringFor || 'General');
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <h2 style="margin: 0 0 12px 0; color: #7cb342; font-size: 20px;">Thanks for contacting Refex Group</h2>
+      <p style="margin: 0 0 12px 0;">Hi ${safeName},</p>
+      <p style="margin: 0 0 12px 0;">
+        We’ve received your enquiry and our team will get back to you shortly.
+      </p>
+      <div style="margin-top: 12px; padding: 14px 16px; background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px;">
+        <p style="margin: 0;"><strong>Enquiring for:</strong> ${safeEnquiry}</p>
+      </div>
+      <p style="margin: 18px 0 0 0; font-size: 12px; color: #6B7280;">
+        If you didn’t submit this request, you can ignore this email.
+      </p>
+      <p style="margin: 18px 0 0 0; font-size: 12px; color: #6B7280;">
+        Regards,<br/>Refex Group
+      </p>
+    </body>
+    </html>
+  `;
+
+  const textBody = `Hi ${formData?.name || 'there'},\n\nWe’ve received your enquiry and our team will get back to you shortly.\n\nEnquiring for: ${formData?.enquiringFor || 'General'}\n\nRegards,\nRefex Group`;
+
+  const mailOptions = {
+    from: `"${config.fromName || 'Refex Support'}" <${process.env.SMTP_USER || config.from}>`,
+    to: customerEmail,
+    replyTo: config.contactEmail || config.from,
+    subject,
+    text: textBody,
+    html: htmlBody,
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log('✅ Contact auto-reply sent successfully:', info.messageId);
+  return { success: true, messageId: info.messageId };
+}
+
 /**
  * Test email configuration
  */
@@ -375,6 +448,7 @@ async function testEmailConfig() {
 
 module.exports = {
   sendContactFormEmail,
+  sendContactAutoReplyEmail,
   testEmailConfig,
   getEmailConfig
 };

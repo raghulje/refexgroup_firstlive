@@ -65,7 +65,6 @@ exports.submit = asyncHandler(async (req, res) => {
     const webhookData = {
       name,
       email,
-      phone: phoneDigits,
       Phone_Number: phoneDigits,
       // Standard payload expects `company` to always exist
       company: company ?? '',
@@ -87,6 +86,21 @@ exports.submit = asyncHandler(async (req, res) => {
         });
       } catch (emailError) {
         console.error('❌ RefexGroup contact email failed (continuing to Kissflow):', emailError?.message || emailError);
+      }
+    });
+
+    // Send auto-reply to customer in background (best-effort)
+    setImmediate(async () => {
+      try {
+        await emailService.sendContactAutoReplyEmail({
+          name,
+          email,
+          phone: phone || '',
+          enquiringFor: enquiringFor || 'General',
+          message
+        });
+      } catch (autoReplyError) {
+        console.warn('⚠️ RefexGroup contact auto-reply failed (continuing):', autoReplyError?.message || autoReplyError);
       }
     });
 

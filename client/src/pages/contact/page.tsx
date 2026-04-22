@@ -13,23 +13,91 @@ import { useEmailValidation } from '../../hooks/enquiry/useEmailValidation';
 import { usePhoneValidation } from '../../hooks/enquiry/usePhoneValidation';
 import { checkEnquiry, createEnquiry, HttpError } from '../../hooks/enquiry/enquiryApi';
 
+const PRODUCT_SECTIONS = [
+  'General Enquiry',
+  'Refex Ash utilization & Coal Handling',
+  'Refex Renewables',
+  'Refex MedTech',
+  'Refex Airports and Transportation',
+  'Refex Mobility',
+  'Refex Life Sciences',
+  'Venwind Refex',
+] as const;
+
+function normalizeProductKey(v: string) {
+  return String(v || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function dedupeProducts(values: string[]) {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of values) {
+    const key = normalizeProductKey(v);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+  }
+  return out;
+}
+
+const REFEX_MEDTECH_PRODUCTS = dedupeProducts([
+  // From latest 3imedtech lists
+  'Mini 90 Point-of-Care X-Ray',
+  'ADONIS HF Mobile DR',
+  'PINKVIEW DR PLUS (Digital Mammography)',
+  'PINKVIEW RT (Analog Mammography)',
+  'Glass-Free Flat Panel Detector',
+  'Retrofit Mammography Panel',
+  'DMD D 2000, X-Ray Film Digitizer',
+  'Image Display Monitors',
+  'CT/MR/Mammograph Multi-Modality Workstations',
+  'CD/DVD Publishers',
+  'MedE Drive for Patient Data Storage',
+  'Anamaya',
+  'Philips Achieva 3.0Tesla X-Series',
+  'GE Signa HDxt 1.5Tesla',
+
+  // From earlier 3imedtech screenshot
+  'FPD C-ARM',
+  'DReam CMT-Dual (Ceiling Type, Dual Detector)',
+  'DReam CMT-Single (Ceiling Type, Single Detector)',
+  'DReam Floor Mounted DR',
+  'ADONIS 100HF/150HF Mobile X-Ray',
+  'ADONIS HF Radiographic Systems 300mA / 500mA / 600mA',
+
+  // From Adonis contact product list
+  'HF Mobile',
+  'HF Fixed',
+  'FPD-C-Arm',
+  '1K*1K High End HF C-ARM',
+  'Line Frequency X-Ray Systems',
+  'Digital Radiography',
+  'Dream Series-Ceiling Suspended',
+]);
+
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
+    product: '',
     enquiringFor: 'Sales',
     message: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'email' | 'phone' | 'message', string>>>({});
-  const [touched, setTouched] = useState<Partial<Record<'name' | 'email' | 'phone' | 'message', boolean>>>({});
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'email' | 'phone' | 'product' | 'message', string>>>({});
+  const [touched, setTouched] = useState<Partial<Record<'name' | 'email' | 'phone' | 'product' | 'message', boolean>>>({});
   const { isCoolingDown, secondsLeft, startCooldown } = useCooldownTimer(10);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [activeProductSection, setActiveProductSection] = useState<(typeof PRODUCT_SECTIONS)[number]>('General Enquiry');
 
   const emailValidation = useEmailValidation(formData.email, true);
   const phoneValidation = usePhoneValidation(formData.phone, true);
+  const productError = !String(formData.product || '').trim() ? 'Product is required' : null;
   const messageError =
     !formData.message.trim()
       ? 'Message is required'
@@ -38,12 +106,13 @@ export default function ContactPage() {
         : null;
 
   const validateAndSet = (field: keyof typeof touched) => {
-    const next: Partial<Record<'name' | 'email' | 'phone' | 'message', string>> = {};
+    const next: Partial<Record<'name' | 'email' | 'phone' | 'product' | 'message', string>> = {};
     if (field === 'name') {
       next.name = !formData.name.trim() ? 'Name is required' : formData.name.trim().length < 2 ? 'Name must be at least 2 characters' : undefined;
     }
     if (field === 'email') next.email = emailValidation.validate() || undefined;
     if (field === 'phone') next.phone = phoneValidation.validate() || undefined;
+    if (field === 'product') next.product = productError || undefined;
     if (field === 'message') next.message = messageError || undefined;
     setFieldErrors((prev) => ({ ...prev, ...next }));
   };
@@ -195,6 +264,7 @@ export default function ContactPage() {
           name: formData.name.trim(),
           email: formData.email.trim(),
           phone: formData.phone.trim(),
+          product: formData.product,
           enquiringFor: formData.enquiringFor,
           message: formData.message,
           source: 'refexgroup-contact',
@@ -204,6 +274,7 @@ export default function ContactPage() {
           name: '',
           email: '',
           phone: '',
+          product: '',
           enquiringFor: 'Sales',
           message: '',
         });
@@ -218,6 +289,7 @@ export default function ContactPage() {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
+        product: formData.product,
         enquiringFor: formData.enquiringFor,
         message: formData.message,
       });
@@ -228,6 +300,7 @@ export default function ContactPage() {
           name: '',
           email: '',
           phone: '',
+          product: '',
           enquiringFor: 'Sales',
           message: '',
         });
@@ -254,6 +327,29 @@ export default function ContactPage() {
       if (touched[key]) validateAndSet(key);
     }
   };
+
+  const selectProductAndClose = (value: string) => {
+    setFormData((prev) => ({ ...prev, product: value }));
+    setTouched((prev) => ({ ...prev, product: true }));
+    setFieldErrors((prev) => ({ ...prev, product: undefined }));
+    setIsProductModalOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isProductModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsProductModalOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isProductModalOpen]);
 
   return (
     <MainLayout>
@@ -390,7 +486,94 @@ export default function ContactPage() {
                       data-readdy-form
                       id="contact-form"
                     >
+                      {isProductModalOpen && (
+                        <div
+                          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                          role="dialog"
+                          aria-modal="true"
+                          aria-label="Choose product"
+                          onMouseDown={() => setIsProductModalOpen(false)}
+                        >
+                          <div className="absolute inset-0 bg-black/40" />
+                          <div
+                            className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden max-h-[85vh] flex flex-col"
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 shrink-0 bg-white">
+                              <div className="min-w-0">
+                                <h3 className="text-base md:text-lg font-semibold text-gray-900 truncate">Choose product</h3>
+                                <p className="text-xs md:text-sm text-gray-500 truncate">Select a section, then choose a product.</p>
+                              </div>
+                              <button
+                                type="button"
+                                className="ml-4 inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-gray-100 text-gray-600"
+                                onClick={() => setIsProductModalOpen(false)}
+                                aria-label="Close"
+                              >
+                                <span className="text-xl leading-none">×</span>
+                              </button>
+                            </div>
+
+                            <div className="grid md:grid-cols-[260px_1fr] flex-1 min-h-0">
+                              <div className="border-b md:border-b-0 md:border-r border-gray-200 bg-gray-50 p-3 overflow-auto">
+                                <div className="space-y-1">
+                                  {PRODUCT_SECTIONS.map((s) => (
+                                    <button
+                                      key={s}
+                                      type="button"
+                                      onClick={() => setActiveProductSection(s)}
+                                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
+                                        activeProductSection === s
+                                          ? 'bg-gray-900 text-white'
+                                          : 'hover:bg-gray-200 text-gray-800'
+                                      }`}
+                                    >
+                                      {s}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="p-4 overflow-auto min-h-0">
+                                {activeProductSection === 'Refex MedTech' ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {REFEX_MEDTECH_PRODUCTS.map((p) => (
+                                      <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => selectProductAndClose(p)}
+                                        className="px-3 py-2 rounded-full border border-gray-300 text-sm hover:bg-gray-900 hover:text-white hover:border-gray-900 transition text-left"
+                                      >
+                                        {p}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    <p className="text-sm text-gray-600">
+                                      {activeProductSection === 'General Enquiry'
+                                        ? 'For general questions, choose General Enquiry.'
+                                        : 'Choose this business unit.'}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => selectProductAndClose(activeProductSection)}
+                                      className="inline-flex items-center px-4 py-2 rounded-full bg-gray-900 text-white text-sm hover:bg-gray-800 transition"
+                                    >
+                                      {activeProductSection}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div>
+                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                          Name <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="text"
                           id="name"
@@ -409,6 +592,9 @@ export default function ContactPage() {
                       </div>
 
                       <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                          Email <span className="text-red-500">*</span>
+                        </label>
                         <input
                           type="email"
                           id="email"
@@ -427,6 +613,9 @@ export default function ContactPage() {
                       </div>
 
                       <div>
+                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                          Contact Number <span className="text-red-500">*</span>
+                        </label>
                         <div className={`w-full px-4 py-2 border rounded-md focus-within:ring-1 focus-within:ring-gray-400 focus-within:border-gray-400 transition-all text-sm ${fieldErrors.phone ? 'border-red-500' : 'border-gray-300'}`}>
                           <PhoneInput
                             country="in"
@@ -477,6 +666,29 @@ export default function ContactPage() {
                       </div>
 
                       <div>
+                        <label htmlFor="product" className="block text-sm font-medium text-gray-700 mb-2">
+                          Product <span className="text-red-500">*</span>
+                        </label>
+                        <button
+                          id="product"
+                          type="button"
+                          onClick={() => setIsProductModalOpen(true)}
+                          onBlur={() => validateAndSet('product')}
+                          className={`w-full px-4 py-3 border rounded-md text-left text-sm bg-white hover:bg-gray-50 transition ${
+                            fieldErrors.product ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        >
+                          <span className={formData.product ? 'text-gray-900' : 'text-gray-400'}>
+                            {formData.product || 'Choose product'}
+                          </span>
+                        </button>
+                        {fieldErrors.product && <p className="text-xs text-red-500 mt-1">{fieldErrors.product}</p>}
+                      </div>
+
+                      <div>
+                        <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                          Message <span className="text-red-500">*</span>
+                        </label>
                         <textarea
                           id="message"
                           name="message"

@@ -105,7 +105,6 @@ async function processQueue() {
     submissionId,
     websiteName,
     formName,
-    'Website and form': websiteAndForm,
     Website_and_form: websiteAndForm
   };
 
