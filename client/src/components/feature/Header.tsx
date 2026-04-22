@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { NAV_LINKS } from '../../data/navigation';
 import { getApiBaseUrl } from '../../config/env';
 import { getCachedGlobalSettings, getCachedNavigation } from '../../services/siteDataCache';
@@ -23,6 +23,7 @@ export default function Header() {
   const [ctaButton, setCtaButton] = useState({ label: 'Get in touch', url: '/contact' });
   const [loading, setLoading] = useState(false); // Changed to false to prevent initial flicker
   const location = useLocation();
+  const navigate = useNavigate();
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const dropdownContainerRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const headerRef = useRef<HTMLElement | null>(null);
@@ -316,8 +317,8 @@ export default function Header() {
               top: offsetPosition,
               behavior: 'smooth'
             });
-            // Update URL hash without scrolling
-            window.history.replaceState(null, '', `#${hashId}`);
+            // Update URL hash via router to keep location in sync
+            navigate({ pathname: currentPath, hash: hashId }, { replace: true });
           }
         }, 100);
         return;
