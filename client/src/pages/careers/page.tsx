@@ -11,6 +11,12 @@ import CenterOfExcellence from '../../wp-content/uploads/2023/02/Center-of-Excel
 import CareersBg2 from '../../wp-content/uploads/2023/03/Careers-bg-2.jpg';
 import { pagesService, sectionsService, testimonialsService, mediaService, formSubmissionsService } from '../../services/apiService';
 import { getApiBaseUrl } from '../../config/env';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import { useCooldownTimer } from '../../hooks/enquiry/useCooldownTimer';
+import { useEmailValidation } from '../../hooks/enquiry/useEmailValidation';
+import { usePhoneValidation } from '../../hooks/enquiry/usePhoneValidation';
+import { checkEnquiry, createEnquiry, HttpError } from '../../hooks/enquiry/enquiryApi';
 
 // Import images from esops folder
 const careers1 = new URL('./esops/careers1.png', import.meta.url).href;
@@ -41,6 +47,11 @@ export default function CareersPage() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'firstName' | 'lastName' | 'email' | 'phone', string>>>({});
+  const { isCoolingDown, secondsLeft, startCooldown } = useCooldownTimer(10);
+
+  const emailValidation = useEmailValidation(formData.email, true);
+  const phoneValidation = usePhoneValidation(formData.phone, false);
 
   // Helper function to get image path from CMS data
   const getImagePath = (imageData: any): string => {
@@ -372,6 +383,9 @@ export default function CareersPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (fieldErrors[name as 'firstName' | 'lastName' | 'email' | 'phone']) {
+      setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -395,15 +409,62 @@ export default function CareersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCoolingDown) return;
     setSubmitting(true);
     setSubmitMessage(null);
+    setFieldErrors({});
 
     try {
       // Validate required fields
-      if (!formData.firstName || !formData.lastName || !formData.email) {
+      const nextErrors: typeof fieldErrors = {};
+      if (formData.firstName.trim().length < 2) nextErrors.firstName = 'Name must be at least 2 characters';
+      if (formData.lastName.trim().length < 2) nextErrors.lastName = 'Name must be at least 2 characters';
+      const emailErr = emailValidation.validate();
+      if (emailErr) nextErrors.email = emailErr;
+      const phoneErr = phoneValidation.validate();
+      if (phoneErr) nextErrors.phone = phoneErr;
+      if (Object.keys(nextErrors).length) {
+        setFieldErrors(nextErrors);
         setSubmitMessage({ type: 'error', text: 'Please fill in all required fields' });
         setSubmitting(false);
         return;
+      }
+
+      // Duplicate check (skip if endpoint not present)
+      try {
+        const dup = await checkEnquiry({
+          name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+        });
+        if (dup?.exists) {
+          const field = dup.field || 'phone';
+          const msg =
+            field === 'email'
+              ? 'This email is already registered'
+              : field === 'phone'
+                ? 'This phone number is already registered'
+                : 'This name is already registered';
+          setFieldErrors((prev) => ({ ...prev, [field]: msg } as any));
+          setSubmitMessage({ type: 'error', text: msg });
+          setSubmitting(false);
+          return;
+        }
+      } catch (err) {
+        if (!(err instanceof HttpError && err.status === 404)) throw err;
+      }
+
+      // Optional create-enquiry record (no file upload)
+      try {
+        await createEnquiry({
+          name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          message: formData.message,
+          source: 'refexgroup-careers',
+        });
+      } catch (err) {
+        if (!(err instanceof HttpError && err.status === 404)) throw err;
       }
 
       // Create FormData for file upload
@@ -432,6 +493,7 @@ export default function CareersPage() {
         message: ''
       });
       setResumeFile(null);
+      startCooldown();
 
       // Reset file input
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -937,42 +999,59 @@ export default function CareersPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                          type="text"
-                          name="firstName"
-                          value={formData.firstName}
-                          onChange={handleInputChange}
-                          placeholder="First Name *"
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
-                        />
-                        <input
-                          type="text"
-                          name="lastName"
-                          value={formData.lastName}
-                          onChange={handleInputChange}
-                          placeholder="Last Name *"
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
-                        />
+                        <div>
+                          <input
+                            type="text"
+                            name="firstName"
+                            value={formData.firstName}
+                            onChange={handleInputChange}
+                            placeholder="e.g., John"
+                            required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
+                          />
+                          {fieldErrors.firstName && <p className="text-xs text-red-500 mt-1">{fieldErrors.firstName}</p>}
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            name="lastName"
+                            value={formData.lastName}
+                            onChange={handleInputChange}
+                            placeholder="e.g., Doe"
+                            required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
+                          />
+                          {fieldErrors.lastName && <p className="text-xs text-red-500 mt-1">{fieldErrors.lastName}</p>}
+                        </div>
                       </div>
                       <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        placeholder="Your Email *"
+                        placeholder="name@company.com"
                         required
                         className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
                       />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="Your Phone Number"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
-                      />
+                      {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
+                      <div className="w-full px-4 py-2 border border-gray-300 rounded-full focus-within:ring-2 focus-within:ring-[#50b848] focus-within:border-transparent">
+                        <PhoneInput
+                          country="in"
+                          value={formData.phone.replace(/^\+/, '')}
+                          onChange={(value) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              phone: value ? `+${value}` : '',
+                            }))
+                          }
+                          inputProps={{ name: 'phone', autoComplete: 'tel' }}
+                          containerClass="w-full"
+                          inputClass="!w-full !border-0 !shadow-none focus:!outline-none !rounded-full"
+                          buttonClass="!bg-transparent !border-0"
+                          placeholder="Enter phone number"
+                        />
+                      </div>
+                      {fieldErrors.phone && <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>}
                       <div>
                         <label className="block text-sm text-gray-700 mb-2">
                           Upload your CV here {resumeFile && <span className="text-green-600">✓ {resumeFile.name}</span>}
@@ -989,13 +1068,13 @@ export default function CareersPage() {
                         name="message"
                         value={formData.message}
                         onChange={handleInputChange}
-                        placeholder="Your Message / Cover Letter"
+                        placeholder="Let us know what you need."
                         rows={4}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent resize-none"
                       ></textarea>
                       <button
                         type="submit"
-                        disabled={submitting}
+                        disabled={submitting || isCoolingDown}
                         className="bg-gray-900 text-white px-4 md:px-8 py-3 rounded-full font-medium hover:bg-gray-800 transition-colors duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm md:text-base"
                       >
                         {submitting ? (

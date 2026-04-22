@@ -6,6 +6,12 @@ import Footer from '../../components/feature/Footer';
 import ContactHeroBg from '../../wp-content/uploads/2023/02/Contact-Page-Bg.jpg';
 import { pagesService, sectionsService, contactFormService } from '../../services/apiService';
 import { getApiBaseUrl } from '../../config/env';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import { useCooldownTimer } from '../../hooks/enquiry/useCooldownTimer';
+import { useEmailValidation } from '../../hooks/enquiry/useEmailValidation';
+import { usePhoneValidation } from '../../hooks/enquiry/usePhoneValidation';
+import { checkEnquiry, createEnquiry, HttpError } from '../../hooks/enquiry/enquiryApi';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -18,6 +24,29 @@ export default function ContactPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'email' | 'phone' | 'message', string>>>({});
+  const [touched, setTouched] = useState<Partial<Record<'name' | 'email' | 'phone' | 'message', boolean>>>({});
+  const { isCoolingDown, secondsLeft, startCooldown } = useCooldownTimer(10);
+
+  const emailValidation = useEmailValidation(formData.email, true);
+  const phoneValidation = usePhoneValidation(formData.phone, true);
+  const messageError =
+    !formData.message.trim()
+      ? 'Message is required'
+      : formData.message.trim().length < 50
+        ? 'Message must be at least 50 characters'
+        : null;
+
+  const validateAndSet = (field: keyof typeof touched) => {
+    const next: Partial<Record<'name' | 'email' | 'phone' | 'message', string>> = {};
+    if (field === 'name') {
+      next.name = !formData.name.trim() ? 'Name is required' : formData.name.trim().length < 2 ? 'Name must be at least 2 characters' : undefined;
+    }
+    if (field === 'email') next.email = emailValidation.validate() || undefined;
+    if (field === 'phone') next.phone = phoneValidation.validate() || undefined;
+    if (field === 'message') next.message = messageError || undefined;
+    setFieldErrors((prev) => ({ ...prev, ...next }));
+  };
   const [pageSections, setPageSections] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
@@ -118,8 +147,73 @@ export default function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus('idle');
+    setFieldErrors({});
 
     try {
+      if (isCoolingDown) return;
+
+      const nextErrors: typeof fieldErrors = {};
+      if (!formData.name.trim() || formData.name.trim().length < 2) nextErrors.name = 'Name must be at least 2 characters';
+      const emailErr = emailValidation.validate();
+      if (emailErr) nextErrors.email = emailErr;
+      const phoneErr = phoneValidation.validate();
+      if (phoneErr) nextErrors.phone = phoneErr;
+      if (messageError) nextErrors.message = messageError;
+      if (Object.keys(nextErrors).length) {
+        setFieldErrors(nextErrors);
+        setTouched({ name: true, email: true, phone: true, message: true });
+        setSubmitStatus('error');
+        return;
+      }
+
+      // Duplicate check (skip if endpoint not present)
+      try {
+        const dup = await checkEnquiry({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+        });
+        if (dup?.exists) {
+          const field = dup.field || 'phone';
+          const msg =
+            field === 'email'
+              ? 'This email is already registered'
+              : field === 'phone'
+                ? 'This phone number is already registered'
+                : 'This name is already registered';
+          setFieldErrors((prev) => ({ ...prev, [field]: msg } as any));
+          setSubmitStatus('error');
+          return;
+        }
+      } catch (err) {
+        if (!(err instanceof HttpError && err.status === 404)) throw err;
+      }
+
+      // Preferred API
+      try {
+        await createEnquiry({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          enquiringFor: formData.enquiringFor,
+          message: formData.message,
+          source: 'refexgroup-contact',
+        });
+        setSubmitStatus('success');
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          enquiringFor: 'Sales',
+          message: '',
+        });
+        startCooldown();
+        return;
+      } catch (err) {
+        if (!(err instanceof HttpError && err.status === 404)) throw err;
+      }
+
+      // Fallback: preserve existing submission behavior
       const result = await contactFormService.submit({
         name: formData.name,
         email: formData.email,
@@ -137,6 +231,7 @@ export default function ContactPage() {
           enquiringFor: 'Sales',
           message: '',
         });
+        startCooldown();
       } else {
         setSubmitStatus('error');
       }
@@ -153,6 +248,11 @@ export default function ContactPage() {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    const key = e.target.name as keyof typeof touched;
+    if (key in touched) {
+      setTouched((prev) => ({ ...prev, [key]: true }));
+      if (touched[key]) validateAndSet(key);
+    }
   };
 
   return (
@@ -298,9 +398,14 @@ export default function ContactPage() {
                           required
                           value={formData.name}
                           onChange={handleChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all text-sm"
-                          placeholder="Your Name"
+                          onBlur={() => {
+                            setTouched((prev) => ({ ...prev, name: true }));
+                            validateAndSet('name');
+                          }}
+                          className={`w-full px-4 py-3 border rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all text-sm ${fieldErrors.name ? 'border-red-500' : 'border-gray-300'}`}
+                          placeholder="e.g., John Doe"
                         />
+                        {fieldErrors.name && <p className="text-xs text-red-500 mt-1">{fieldErrors.name}</p>}
                       </div>
 
                       <div>
@@ -311,21 +416,44 @@ export default function ContactPage() {
                           required
                           value={formData.email}
                           onChange={handleChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all text-sm"
-                          placeholder="Your Email"
+                          onBlur={() => {
+                            setTouched((prev) => ({ ...prev, email: true }));
+                            validateAndSet('email');
+                          }}
+                          className={`w-full px-4 py-3 border rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all text-sm ${fieldErrors.email ? 'border-red-500' : 'border-gray-300'}`}
+                          placeholder="name@company.com"
                         />
+                        {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
                       </div>
 
                       <div>
-                        <input
-                          type="tel"
-                          id="phone"
-                          name="phone"
-                          value={formData.phone}
-                          onChange={handleChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all text-sm"
-                          placeholder="Your Phone Number"
-                        />
+                        <div className={`w-full px-4 py-2 border rounded-md focus-within:ring-1 focus-within:ring-gray-400 focus-within:border-gray-400 transition-all text-sm ${fieldErrors.phone ? 'border-red-500' : 'border-gray-300'}`}>
+                          <PhoneInput
+                            country="in"
+                            value={formData.phone.replace(/^\+/, '')}
+                            onChange={(value) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                phone: value ? `+${value}` : '',
+                              }))
+                            }
+                            inputProps={{
+                              id: 'phone',
+                              name: 'phone',
+                              autoComplete: 'tel',
+                              required: true,
+                              onBlur: () => {
+                                setTouched((prev) => ({ ...prev, phone: true }));
+                                validateAndSet('phone');
+                              }
+                            }}
+                            containerClass="w-full"
+                            inputClass="!w-full !border-0 !shadow-none focus:!outline-none"
+                            buttonClass="!bg-transparent !border-0"
+                            placeholder="Enter phone number"
+                          />
+                        </div>
+                        {fieldErrors.phone && <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>}
                       </div>
 
                       <div>
@@ -356,11 +484,16 @@ export default function ContactPage() {
                           rows={4}
                           value={formData.message}
                           onChange={handleChange}
+                          onBlur={() => {
+                            setTouched((prev) => ({ ...prev, message: true }));
+                            validateAndSet('message');
+                          }}
                           maxLength={500}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all resize-none text-sm"
-                          placeholder="Your Message"
+                          className={`w-full px-4 py-3 border rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all resize-none text-sm ${fieldErrors.message ? 'border-red-500' : 'border-gray-300'}`}
+                          placeholder="Let us know what you need."
                         ></textarea>
                         <p className="text-xs text-gray-500 mt-1">{formData.message.length}/500 characters</p>
+                        {fieldErrors.message && <p className="text-xs text-red-500 mt-1">{fieldErrors.message}</p>}
                       </div>
 
                       {submitStatus === 'success' && (
@@ -377,7 +510,7 @@ export default function ContactPage() {
 
                       <button
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isCoolingDown}
                         className="bg-gray-900 text-white px-8 py-3 rounded-full font-medium text-sm hover:bg-gray-800 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting ? 'Submitting...' : 'Submit'}
