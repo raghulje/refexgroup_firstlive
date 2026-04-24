@@ -385,6 +385,10 @@ async function sendContactAutoReplyEmail(formData) {
 
   const safeName = escapeHtml(formData?.name || 'there');
   const safeEnquiry = escapeHtml(formData?.enquiringFor || 'General');
+  const safeEmail = escapeHtml(formData?.email || '');
+  const safePhone = escapeHtml(formData?.phone || '');
+  const safeCompany = escapeHtml(formData?.company || '');
+  const safeMessage = escapeHtml(formData?.message || '');
 
   const htmlBody = `
     <!DOCTYPE html>
@@ -399,7 +403,12 @@ async function sendContactAutoReplyEmail(formData) {
         We’ve received your enquiry and our team will get back to you shortly.
       </p>
       <div style="margin-top: 12px; padding: 14px 16px; background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 10px;">
-        <p style="margin: 0;"><strong>Enquiring for:</strong> ${safeEnquiry}</p>
+        <p style="margin: 0 0 6px 0;"><strong>Name:</strong> ${safeName}</p>
+        ${safeEmail ? `<p style="margin: 0 0 6px 0;"><strong>Email:</strong> ${safeEmail}</p>` : ''}
+        ${safePhone ? `<p style="margin: 0 0 6px 0;"><strong>Contact:</strong> ${safePhone}</p>` : ''}
+        ${safeCompany ? `<p style="margin: 0 0 6px 0;"><strong>Company:</strong> ${safeCompany}</p>` : ''}
+        <p style="margin: 0 0 6px 0;"><strong>Enquiring for:</strong> ${safeEnquiry}</p>
+        ${safeMessage ? `<p style="margin: 0; white-space: pre-wrap;"><strong>Message:</strong><br/>${safeMessage}</p>` : ''}
       </div>
       <p style="margin: 18px 0 0 0; font-size: 12px; color: #6B7280;">
         If you didn’t submit this request, you can ignore this email.
@@ -411,7 +420,7 @@ async function sendContactAutoReplyEmail(formData) {
     </html>
   `;
 
-  const textBody = `Hi ${formData?.name || 'there'},\n\nWe’ve received your enquiry and our team will get back to you shortly.\n\nEnquiring for: ${formData?.enquiringFor || 'General'}\n\nRegards,\nRefex Group`;
+  const textBody = `Hi ${formData?.name || 'there'},\n\nWe’ve received your enquiry and our team will get back to you shortly.\n\nYour enquiry details:\n${formData?.name ? `- Name: ${formData.name}\n` : ''}${formData?.email ? `- Email: ${formData.email}\n` : ''}${formData?.phone ? `- Contact: ${formData.phone}\n` : ''}${formData?.company ? `- Company: ${formData.company}\n` : ''}- Enquiring for: ${formData?.enquiringFor || 'General'}\n${formData?.message ? `- Message: ${formData.message}\n` : ''}\nRegards,\nRefex Group`;
 
   const mailOptions = {
     from: `"${config.fromName || 'Refex Support'}" <${process.env.SMTP_USER || config.from}>`,
