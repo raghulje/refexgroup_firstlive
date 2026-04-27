@@ -15,7 +15,7 @@ import { checkEnquiry, createEnquiry, HttpError } from '../../hooks/enquiry/enqu
 
 function SubmissionSuccessOverlay({ onDone }: { onDone: () => void }) {
   useEffect(() => {
-    const t = window.setTimeout(onDone, 15000);
+    const t = window.setTimeout(onDone, 10000);
     return () => window.clearTimeout(t);
   }, [onDone]);
 
