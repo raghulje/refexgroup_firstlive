@@ -8,6 +8,7 @@ import { pagesService, sectionsService, contactFormService } from '../../service
 import { getApiBaseUrl } from '../../config/env';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
+import { Combobox } from '@headlessui/react';
 import { useCooldownTimer } from '../../hooks/enquiry/useCooldownTimer';
 import { useEmailValidation } from '../../hooks/enquiry/useEmailValidation';
 import { usePhoneValidation } from '../../hooks/enquiry/usePhoneValidation';
@@ -128,11 +129,76 @@ const REFEX_MEDTECH_PRODUCTS = dedupeProducts([
   'Dream Series-Ceiling Suspended',
 ]);
 
+const TOP_CITY_OPTIONS = [
+  'Mumbai, Maharashtra',
+  'Delhi, Delhi',
+  'Bengaluru, Karnataka',
+  'Chennai, Tamil Nadu',
+  'Hyderabad, Telangana',
+  'Kolkata, West Bengal',
+  'Pune, Maharashtra',
+  'Ahmedabad, Gujarat',
+  'Jaipur, Rajasthan',
+  'Surat, Gujarat',
+  'Lucknow, Uttar Pradesh',
+  'Kanpur, Uttar Pradesh',
+  'Nagpur, Maharashtra',
+  'Indore, Madhya Pradesh',
+  'Bhopal, Madhya Pradesh',
+  'Patna, Bihar',
+  'Ludhiana, Punjab',
+  'Agra, Uttar Pradesh',
+  'Visakhapatnam, Andhra Pradesh',
+  'Coimbatore, Tamil Nadu',
+] as const;
+
+function normalizeCityQuery(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9, ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function levenshteinDistance(a: string, b: string) {
+  if (a === b) return 0;
+  if (!a) return b.length;
+  if (!b) return a.length;
+  const m = a.length;
+  const n = b.length;
+  const dp = new Array<number>(n + 1);
+  for (let j = 0; j <= n; j++) dp[j] = j;
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j];
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + cost);
+      prev = tmp;
+    }
+  }
+  return dp[n];
+}
+
+function isSubsequence(needle: string, haystack: string) {
+  let i = 0;
+  let j = 0;
+  while (i < needle.length && j < haystack.length) {
+    if (needle.charCodeAt(i) === haystack.charCodeAt(j)) i++;
+    j++;
+  }
+  return i === needle.length;
+}
+
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
+    city: '',
     product: '',
     enquiringFor: 'Sales',
     message: '',
@@ -146,6 +212,9 @@ export default function ContactPage() {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [activeProductSection, setActiveProductSection] = useState<(typeof PRODUCT_SECTIONS)[number]>('General Enquiry');
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [indiaCityOptions, setIndiaCityOptions] = useState<string[]>([]);
+  const [isCityListLoading, setIsCityListLoading] = useState(true);
+  const [cityQuery, setCityQuery] = useState('');
 
   const emailValidation = useEmailValidation(formData.email, true);
   const phoneValidation = usePhoneValidation(formData.phone, true);
@@ -257,6 +326,29 @@ export default function ContactPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadIndiaCities = async () => {
+      try {
+        const res = await fetch('/api/geo/india-cities');
+        if (!res.ok) throw new Error(`Failed to fetch cities (${res.status})`);
+        const payload = await res.json();
+        const cities = Array.isArray(payload?.data) ? payload.data : [];
+        if (!cancelled) setIndiaCityOptions(cities);
+      } catch (error) {
+        console.warn('Failed to load India city list from geo endpoint', error);
+      } finally {
+        if (!cancelled) setIsCityListLoading(false);
+      }
+    };
+
+    loadIndiaCities();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     AOS.init({
       duration: 1000,
       once: true,
@@ -316,6 +408,7 @@ export default function ContactPage() {
           name: formData.name.trim(),
           email: formData.email.trim(),
           phone: formData.phone.trim(),
+          city: formData.city,
           product: formData.product,
           enquiringFor: formData.enquiringFor,
           message: formData.message,
@@ -327,6 +420,7 @@ export default function ContactPage() {
           name: '',
           email: '',
           phone: '',
+          city: '',
           product: '',
           enquiringFor: 'Sales',
           message: '',
@@ -342,6 +436,7 @@ export default function ContactPage() {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
+        city: formData.city,
         product: formData.product,
         enquiringFor: formData.enquiringFor,
         message: formData.message,
@@ -354,6 +449,7 @@ export default function ContactPage() {
           name: '',
           email: '',
           phone: '',
+          city: '',
           product: '',
           enquiringFor: 'Sales',
           message: '',
@@ -404,6 +500,53 @@ export default function ContactPage() {
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [isProductModalOpen]);
+
+  const cityOptions = indiaCityOptions;
+  const filteredCityOptions = (() => {
+    const q = normalizeCityQuery(cityQuery);
+    if (!q) {
+      const top = TOP_CITY_OPTIONS.filter((c) => cityOptions.includes(c));
+      const topSet = new Set(top);
+      const rest = cityOptions.filter((c) => !topSet.has(c));
+      return [...top, ...rest].slice(0, 250);
+    }
+
+    const tokens = q.split(' ').filter(Boolean);
+    const maxEdits = q.length >= 7 ? 3 : 2;
+    const scored: Array<{ label: string; score: number }> = [];
+    for (const label of cityOptions) {
+      const normLabel = normalizeCityQuery(label);
+      const [cityPart = '', statePart = ''] = normLabel.split(',').map((s) => s.trim());
+      let score = 0;
+
+      if (normLabel.startsWith(q)) score += 120;
+      if (cityPart.startsWith(q)) score += 160;
+      if (cityPart.includes(q)) score += 90;
+      if (normLabel.includes(q)) score += 70;
+
+      for (const t of tokens) {
+        if (!t) continue;
+        if (cityPart.startsWith(t)) score += 45;
+        else if (cityPart.includes(t)) score += 18;
+        if (statePart.startsWith(t)) score += 22;
+        else if (statePart.includes(t)) score += 10;
+      }
+
+      if (q.length >= 4 && isSubsequence(q.replace(/[^a-z0-9]/g, ''), cityPart.replace(/[^a-z0-9]/g, ''))) {
+        score += 40;
+      }
+
+      if (q.length >= 4) {
+        const dist = levenshteinDistance(q, cityPart.slice(0, Math.max(q.length + 2, 8)));
+        if (dist <= maxEdits) score += (maxEdits - dist + 1) * 14;
+      }
+
+      if (score > 0) scored.push({ label, score });
+    }
+
+    scored.sort((a, b) => b.score - a.score || a.label.localeCompare(b.label, 'en', { sensitivity: 'base' }));
+    return scored.slice(0, 250).map((x) => x.label);
+  })();
 
   return (
     <MainLayout>
@@ -705,6 +848,73 @@ export default function ContactPage() {
                           />
                         </div>
                         {fieldErrors.phone && <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          City <span className="text-red-500">*</span>
+                        </label>
+                        <Combobox
+                          value={formData.city}
+                          onChange={(value) => {
+                            setFormData((prev) => ({ ...prev, city: value || '' }));
+                            setCityQuery('');
+                          }}
+                        >
+                          <div className="relative">
+                            <Combobox.Input
+                              className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-md focus:ring-1 focus:ring-gray-400 focus:border-gray-400 outline-none transition-all text-sm bg-white"
+                              placeholder="Type to search city..."
+                              displayValue={(value: string) => value}
+                              onChange={(event) => setCityQuery(event.target.value)}
+                              onBlur={() => {
+                                const typed = cityQuery.trim();
+                                if (typed && cityOptions.includes(typed)) {
+                                  setFormData((prev) => ({ ...prev, city: typed }));
+                                }
+                                setCityQuery('');
+                              }}
+                            />
+                            <input type="hidden" name="city" value={formData.city} required />
+                            <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-3">
+                              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </Combobox.Button>
+                            {(formData.city || cityQuery) && (
+                              <button
+                                type="button"
+                                aria-label="Clear city"
+                                onClick={() => {
+                                  setFormData((prev) => ({ ...prev, city: '' }));
+                                  setCityQuery('');
+                                }}
+                                className="absolute inset-y-0 right-10 flex items-center pr-1 text-gray-400 hover:text-gray-600"
+                              >
+                                <span className="text-2xl font-semibold leading-none">×</span>
+                              </button>
+                            )}
+                            <Combobox.Options className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 text-sm shadow-lg focus:outline-none">
+                              {isCityListLoading ? (
+                                <div className="px-4 py-2 text-gray-500">Loading cities...</div>
+                              ) : filteredCityOptions.length === 0 ? (
+                                <div className="px-4 py-2 text-gray-500">No cities found.</div>
+                              ) : (
+                                filteredCityOptions.map((label) => (
+                                  <Combobox.Option
+                                    key={label}
+                                    value={label}
+                                    className={({ active }) =>
+                                      `cursor-pointer select-none px-4 py-2 ${active ? 'bg-gray-900 text-white' : 'text-gray-900'}`
+                                    }
+                                  >
+                                    {label}
+                                  </Combobox.Option>
+                                ))
+                              )}
+                            </Combobox.Options>
+                          </div>
+                        </Combobox>
                       </div>
 
                       <div>

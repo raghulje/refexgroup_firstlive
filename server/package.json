@@ -54,6 +54,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@countrystatecity/countries": "^1.0.5",
     "bcrypt": "^6.0.0",
     "body-parser": "^1.20.2",
     "compression": "^1.8.1",
@@ -75,3 +76,4 @@
     "nodemon": "^3.1.0"
   }
 }
+

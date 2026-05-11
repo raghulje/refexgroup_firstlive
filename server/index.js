@@ -82,6 +82,7 @@ app.use("/api/v1/global-settings", require("./routes/globalSettings"));
 app.use("/api/v1/media", require("./routes/media"));
 app.use("/api/v1/cms", require("./routes/cms"));
 app.use("/api/v1", require("./routes/homeSections"));
+app.use("/api/geo", require("./routes/geo"));
 // Email and form submission routes
 app.use("/api/v1/email-settings", require("./routes/emailSettings"));
 app.use("/api/v1/form-submissions", require("./routes/formSubmissions"));

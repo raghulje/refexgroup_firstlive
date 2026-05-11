@@ -171,6 +171,7 @@ export const contactFormService = {
         name: string;
         email: string;
         phone?: string;
+        city?: string;
         enquiringFor?: string;
         message: string;
     }): Promise<any> => {

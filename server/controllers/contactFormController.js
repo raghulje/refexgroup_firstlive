@@ -57,7 +57,7 @@ exports.submit = asyncHandler(async (req, res) => {
   }
 
   try {
-    const { name, email, phone, enquiringFor, message, company } = req.body;
+    const { name, email, phone, city, product, enquiringFor, message, company } = req.body;
     const phoneDigits = phoneToDigitsOnly(phone || '');
     const meta = getRequestMeta(req);
 
@@ -68,6 +68,8 @@ exports.submit = asyncHandler(async (req, res) => {
       Phone_Number: phoneDigits,
       // Standard payload expects `company` to always exist
       company: company ?? '',
+      ...(city && { city }),
+      ...(product && { Product: product }),
       message,
       ...(enquiringFor && { enquiringFor }),
       ...meta
@@ -81,6 +83,8 @@ exports.submit = asyncHandler(async (req, res) => {
           name,
           email,
           phone: phone || '',
+          city: city || '',
+          product: product || '',
           enquiringFor: enquiringFor || 'General',
           message
         });
@@ -96,6 +100,8 @@ exports.submit = asyncHandler(async (req, res) => {
           name,
           email,
           phone: phone || '',
+          city: city || '',
+          product: product || '',
           enquiringFor: enquiringFor || 'General',
           message
         });
