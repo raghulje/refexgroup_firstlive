@@ -86,6 +86,19 @@ export const PolicyForm = ({
                 />
                 <p className="text-xs text-gray-500 mt-1">Label for the download link (defaults to title)</p>
             </div>
+
+            <label className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                <div>
+                    <p className="text-sm font-medium text-gray-700">Policy Status</p>
+                    <p className="text-xs text-gray-500 mt-1">Inactive policies stay in CMS but are hidden from the live ESG page.</p>
+                </div>
+                <input
+                    type="checkbox"
+                    checked={formData.isActive !== false}
+                    onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+            </label>
         </div>
     );
 };

@@ -186,6 +186,69 @@ import {
   coreValuesService
 } from '../../services/apiService';
 
+const ESG_POLICY_FIELD_CONFIGS = [
+  { systemKey: 'quality', titleKey: 'qualityPolicyTitle', urlKey: 'qualityPolicyUrl', mediaIdKey: 'qualityPolicyMediaId' },
+  { systemKey: 'ehs', titleKey: 'ehsPolicyTitle', urlKey: 'ehsPolicyUrl', mediaIdKey: 'ehsPolicyMediaId' },
+  { systemKey: 'sustainability', titleKey: 'sustainabilityPolicyTitle', urlKey: 'sustainabilityPolicyUrl', mediaIdKey: 'sustainabilityPolicyMediaId' },
+  { systemKey: 'grievance', titleKey: 'grievancePolicyTitle', urlKey: 'grievancePolicyUrl', mediaIdKey: 'grievancePolicyMediaId' },
+  { systemKey: 'abac', titleKey: 'abacPolicyTitle', urlKey: 'abacPolicyUrl', mediaIdKey: 'abacPolicyMediaId' },
+  { systemKey: 'vendor-code', titleKey: 'vendorCodeTitle', urlKey: 'vendorCodeUrl', mediaIdKey: 'vendorCodeMediaId' },
+] as const;
+
+function buildManagedEsgPoliciesFromValues(getValue: (key: string) => any) {
+  let order = 1;
+
+  return ESG_POLICY_FIELD_CONFIGS.reduce((items: any[], config) => {
+    const title = String(getValue(config.titleKey) || '').trim();
+    const link = String(getValue(config.urlKey) || '').trim();
+
+    if (!title || !link) {
+      return items;
+    }
+
+    items.push({
+      id: `policy-system-${config.systemKey}`,
+      systemKey: config.systemKey,
+      title,
+      label: title,
+      link,
+      mediaId: getValue(config.mediaIdKey) || null,
+      order: order++,
+      isActive: true,
+    });
+
+    return items;
+  }, []);
+}
+
+function buildManagedEsgPoliciesFromSection(section: any) {
+  return buildManagedEsgPoliciesFromValues((key) => {
+    if (key.endsWith('MediaId')) {
+      const urlKey = key.replace(/MediaId$/, 'Url');
+      return section?.content?.find((content: any) => content.contentKey === urlKey)?.mediaId || null;
+    }
+
+    return section?.content?.find((content: any) => content.contentKey === key)?.contentValue;
+  });
+}
+
+function buildManagedEsgPoliciesFromFormData(formData: any) {
+  return buildManagedEsgPoliciesFromValues((key) => formData?.[key]);
+}
+
+function normalizeManagedEsgPolicies(rawPolicies: any[]) {
+  return (Array.isArray(rawPolicies) ? rawPolicies : [])
+    .map((policy: any, index: number) => ({
+      ...policy,
+      id: policy.id || (policy.systemKey ? `policy-system-${policy.systemKey}` : `policy-${index}`),
+      title: policy.title || policy.label || `Policy ${index + 1}`,
+      label: policy.label || policy.title || `Policy ${index + 1}`,
+      order: policy.order || index + 1,
+      isActive: policy.isActive !== false,
+    }))
+    .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+}
+
 // Define pages array outside component to avoid initialization order issues
 const PAGES = [
   { id: 'home-page', label: 'Home Page', icon: 'ri-home-line', category: 'main' },
@@ -1506,6 +1569,56 @@ export default function AdminDashboard() {
           const updateResult = await sectionContentService.bulkUpdate(contentUpdates);
           console.log('Bulk update result:', updateResult);
 
+          if (entitySectionKey === 'policies') {
+            const existingPoliciesContent = section.content?.find((c: any) => c.contentKey === 'policies');
+            let existingPolicies: any[] = [];
+
+            if (existingPoliciesContent?.contentType === 'json') {
+              try {
+                existingPolicies = normalizeManagedEsgPolicies(JSON.parse(existingPoliciesContent.contentValue));
+              } catch {
+                existingPolicies = [];
+              }
+            }
+
+            const existingPolicyMap = new Map(
+              existingPolicies
+                .filter((policy: any) => policy.systemKey)
+                .map((policy: any) => [policy.systemKey, policy])
+            );
+
+            const hasManagedPolicies = Boolean(existingPoliciesContent?.id);
+            const managedPolicies = buildManagedEsgPoliciesFromFormData(submitData)
+              .filter((policy: any) => !hasManagedPolicies || existingPolicyMap.has(policy.systemKey))
+              .map((policy: any) => {
+                const existingPolicy = existingPolicyMap.get(policy.systemKey);
+                return {
+                  ...existingPolicy,
+                  ...policy,
+                  id: existingPolicy?.id || policy.id,
+                  label: existingPolicy?.label || policy.label,
+                  isActive: existingPolicy?.isActive !== false,
+                };
+              });
+
+            const customPolicies = existingPolicies.filter((policy: any) => !policy.systemKey);
+            const mergedPolicies = normalizeManagedEsgPolicies([...managedPolicies, ...customPolicies]);
+
+            if (existingPoliciesContent?.id) {
+              await sectionContentService.update(existingPoliciesContent.id, {
+                contentValue: JSON.stringify(mergedPolicies),
+                contentType: 'json'
+              });
+            } else {
+              await sectionContentService.bulkUpdate([{
+                sectionId: section.id,
+                contentKey: 'policies',
+                contentValue: JSON.stringify(mergedPolicies),
+                contentType: 'json'
+              }]);
+            }
+          }
+
           // Success - close modal and refresh
           setShowModal(false);
           setFormData({});
@@ -1699,16 +1812,12 @@ export default function AdminDashboard() {
 
         if (policiesContent && policiesContent.contentType === 'json') {
           try {
-            policies = JSON.parse(policiesContent.contentValue);
-            // Ensure all existing policies have IDs
-            policies = policies.map((p: any, idx: number) => ({
-              ...p,
-              id: p.id || `policy-${idx}-${Date.now()}`,
-              order: p.order || idx + 1
-            }));
+            policies = normalizeManagedEsgPolicies(JSON.parse(policiesContent.contentValue));
           } catch {
-            policies = [];
+            policies = buildManagedEsgPoliciesFromSection(targetSection);
           }
+        } else {
+          policies = buildManagedEsgPoliciesFromSection(targetSection);
         }
 
         // Resolve mediaId to filePath if mediaId exists but link doesn't
@@ -1731,7 +1840,9 @@ export default function AdminDashboard() {
           link: resolvedLink || submitData.link || '',
           label: submitData.label || '',
           mediaId: submitData.mediaId || null,
-          order: submitData.order !== undefined ? submitData.order : (policies.length + 1)
+          systemKey: submitData.systemKey || editingItem?.systemKey || null,
+          order: submitData.order !== undefined ? submitData.order : (policies.length + 1),
+          isActive: submitData.isActive !== false
         };
 
         if (modalType === 'add') {
@@ -1755,7 +1866,7 @@ export default function AdminDashboard() {
         }
 
         // Sort by order
-        policies.sort((a, b) => (a.order || 0) - (b.order || 0));
+        policies = normalizeManagedEsgPolicies(policies);
 
         // Update content
         if (policiesContent) {
@@ -2095,9 +2206,6 @@ export default function AdminDashboard() {
               awardSubmitData.showAwardName = Boolean(awardSubmitData.showAwardName);
             }
             result = await awardsService.update(editingItem.id, awardSubmitData);
-            break;
-          case 'core-value':
-            result = await coreValuesService.update(editingItem.id, submitData);
             break;
           case 'core-value':
             result = await coreValuesService.update(editingItem.id, submitData);

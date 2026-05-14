@@ -5,6 +5,57 @@ import { getAssetPath } from '../../shared/utils';
 import type { CMSComponentProps } from '../../shared/types';
 import { pagesService, sectionsService, sectionContentService, sdgCardsService } from '../../../../services/apiService';
 
+const ESG_POLICY_FIELD_CONFIGS = [
+  { systemKey: 'quality', titleKey: 'qualityPolicyTitle', urlKey: 'qualityPolicyUrl', mediaIdKey: 'qualityPolicyMediaId' },
+  { systemKey: 'ehs', titleKey: 'ehsPolicyTitle', urlKey: 'ehsPolicyUrl', mediaIdKey: 'ehsPolicyMediaId' },
+  { systemKey: 'sustainability', titleKey: 'sustainabilityPolicyTitle', urlKey: 'sustainabilityPolicyUrl', mediaIdKey: 'sustainabilityPolicyMediaId' },
+  { systemKey: 'grievance', titleKey: 'grievancePolicyTitle', urlKey: 'grievancePolicyUrl', mediaIdKey: 'grievancePolicyMediaId' },
+  { systemKey: 'abac', titleKey: 'abacPolicyTitle', urlKey: 'abacPolicyUrl', mediaIdKey: 'abacPolicyMediaId' },
+  { systemKey: 'vendor-code', titleKey: 'vendorCodeTitle', urlKey: 'vendorCodeUrl', mediaIdKey: 'vendorCodeMediaId' },
+] as const;
+
+function normalizeManagedPolicies(rawPolicies: any[]) {
+  return (Array.isArray(rawPolicies) ? rawPolicies : [])
+    .map((policy: any, index: number) => ({
+      ...policy,
+      id: policy.id || (policy.systemKey ? `policy-system-${policy.systemKey}` : `policy-${index}`),
+      title: policy.title || policy.label || `Policy ${index + 1}`,
+      label: policy.label || policy.title || `Policy ${index + 1}`,
+      order: policy.order || index + 1,
+      isActive: policy.isActive !== false,
+    }))
+    .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+}
+
+function buildPoliciesFromSection(section: any) {
+  if (!section?.content) return [];
+
+  let order = 1;
+  return ESG_POLICY_FIELD_CONFIGS.reduce((items: any[], config) => {
+    const titleItem = section.content.find((c: any) => c.contentKey === config.titleKey);
+    const urlItem = section.content.find((c: any) => c.contentKey === config.urlKey);
+    const title = String(titleItem?.contentValue || '').trim();
+    const link = String(urlItem?.contentValue || '').trim();
+
+    if (!title || !link) {
+      return items;
+    }
+
+    items.push({
+      id: `policy-system-${config.systemKey}`,
+      systemKey: config.systemKey,
+      title,
+      label: title,
+      link,
+      mediaId: urlItem?.mediaId || null,
+      order: order++,
+      isActive: true,
+    });
+
+    return items;
+  }, []);
+}
+
 interface ESGPageProps extends Partial<CMSComponentProps> {
   token: string;
   showModal: boolean;
@@ -182,19 +233,13 @@ export default function ESGPage_cms({
         if (policiesContent && policiesContent.contentType === 'json') {
           try {
             const parsed = JSON.parse(policiesContent.contentValue);
-            // Ensure all policies have stable IDs for drag-drop
-            const policiesWithIds = Array.isArray(parsed)
-              ? parsed.map((policy: any, index: number) => ({
-                ...policy,
-                id: policy.id || `policy-${index}-${Date.now()}`,
-                order: policy.order || index + 1
-              }))
-              : [];
-            setPolicies(policiesWithIds);
+            setPolicies(normalizeManagedPolicies(parsed));
           } catch (e) {
             console.error('Error parsing policies:', e);
-            setPolicies([]);
+            setPolicies(buildPoliciesFromSection(policiesSection));
           }
+        } else {
+          setPolicies(buildPoliciesFromSection(policiesSection));
         }
       }
     } catch (error) {
@@ -614,7 +659,8 @@ export default function ESGPage_cms({
       link: '',
       label: '',
       order: maxOrder + 1,
-      mediaId: null
+      mediaId: null,
+      isActive: true,
     });
     setEditingItem(null);
     setModalType('add');
@@ -631,7 +677,8 @@ export default function ESGPage_cms({
       link: policy.link || '', // Use link or ID
       label: policy.label || '',
       fileId: policy.mediaId || null,
-      mediaId: policy.mediaId || null
+      mediaId: policy.mediaId || null,
+      isActive: policy.isActive !== false,
     });
     setModalType('edit');
     setCurrentEntityType('policy');
@@ -642,8 +689,6 @@ export default function ESGPage_cms({
     if (!esgPage?.id || !policiesSection?.content) return;
 
     const policiesContent = policiesSection.content.find((c: any) => c.contentKey === 'policies');
-    // If no content, can't save order (unless we create it, but usually order save implies list exists)
-    if (!policiesContent) return;
 
     try {
       setSavingPolicies(true);
@@ -655,10 +700,19 @@ export default function ESGPage_cms({
 
       setPolicies(updatedPolicies);
 
-      await sectionContentService.update(policiesContent.id, {
-        contentValue: JSON.stringify(updatedPolicies),
-        contentType: 'json'
-      });
+      if (policiesContent?.id) {
+        await sectionContentService.update(policiesContent.id, {
+          contentValue: JSON.stringify(updatedPolicies),
+          contentType: 'json'
+        });
+      } else {
+        await sectionContentService.bulkUpdate([{
+          sectionId: policiesSection.id,
+          contentKey: 'policies',
+          contentValue: JSON.stringify(updatedPolicies),
+          contentType: 'json'
+        }]);
+      }
 
       alert('Policies order saved successfully!');
 
@@ -1516,21 +1570,48 @@ export default function ESGPage_cms({
                 key: 'order',
                 header: 'Order',
                 render: (value: any) => <span className="text-gray-500">{value}</span>
+              },
+              {
+                key: 'isActive',
+                header: 'Status',
+                render: (value: any) => (
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${value === false ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'}`}>
+                    {value === false ? 'Inactive' : 'Active'}
+                  </span>
+                )
               }
             ]}
             onEdit={(item) => handleEditPolicy(item)}
             onDelete={async (item) => {
               if (window.confirm('Are you sure you want to delete this policy?')) {
-                const updatedPolicies = policies.filter(p => p !== item);
+                const updatedPolicies = policies
+                  .filter((p) => String(p.id) !== String(item.id))
+                  .map((policy, index) => ({
+                    ...policy,
+                    order: index + 1
+                  }));
                 setPolicies(updatedPolicies);
 
                 const policiesContent = policiesSection?.content?.find((c: any) => c.contentKey === 'policies');
-                if (policiesContent) {
+                if (policiesContent?.id) {
                   try {
                     await sectionContentService.update(policiesContent.id, {
                       contentValue: JSON.stringify(updatedPolicies),
                       contentType: 'json'
                     });
+                    await fetchESGData();
+                  } catch (error) {
+                    console.error('Error deleting policy:', error);
+                    alert('Failed to delete policy');
+                  }
+                } else {
+                  try {
+                    await sectionContentService.bulkUpdate([{
+                      sectionId: policiesSection.id,
+                      contentKey: 'policies',
+                      contentValue: JSON.stringify(updatedPolicies),
+                      contentType: 'json'
+                    }]);
                     await fetchESGData();
                   } catch (error) {
                     console.error('Error deleting policy:', error);

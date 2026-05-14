@@ -18,6 +18,15 @@ import SDGHero from '../../wp-content/uploads/2023/02/SDG-Image-Hero-Large1.jpeg
 import CoreValuesPattern from '../../wp-content/uploads/2023/02/About_CoreValues_Dot-Pattern.png';
 import { getApiBaseUrl } from '../../config/env';
 
+const ESG_POLICY_DISPLAY_CONFIGS = [
+  { systemKey: 'quality', group: 'primary' },
+  { systemKey: 'ehs', group: 'primary' },
+  { systemKey: 'sustainability', group: 'primary' },
+  { systemKey: 'grievance', group: 'other' },
+  { systemKey: 'abac', group: 'other' },
+  { systemKey: 'vendor-code', group: 'other' },
+] as const;
+
 
 
 const ESGPage = () => {
@@ -260,10 +269,99 @@ const ESGPage = () => {
               return null;
             };
 
-            // Build fixed policies array
+            const policiesContent = policiesSection.content.find((c: any) => c.contentKey === 'policies');
+            if (policiesContent && policiesContent.contentType === 'json') {
+              try {
+                const parsed = JSON.parse(policiesContent.contentValue);
+                if (Array.isArray(parsed)) {
+                  const normalizedPolicies = parsed
+                    .map((policy: any, index: number) => ({
+                      ...policy,
+                      id: policy.id || (policy.systemKey ? `policy-system-${policy.systemKey}` : `policy-${index}`),
+                      title: policy.title || policy.label || `Policy ${index + 1}`,
+                      label: policy.label || policy.title || `Policy ${index + 1}`,
+                      order: policy.order || index + 1,
+                      isActive: policy.isActive !== false,
+                    }))
+                    .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+
+                  const activePolicies = normalizedPolicies.filter((policy: any) => policy.isActive !== false);
+
+                  const resolvedPolicies = await Promise.all(activePolicies.map(async (policy: any) => {
+                    let link = policy.link || policy.url || '';
+
+                    if ((!link || link === '') && policy.mediaId) {
+                      link = (await resolveMediaId(policy.mediaId)) || '';
+                    } else if (typeof link === 'number' || (typeof link === 'string' && /^\d+$/.test(link))) {
+                      link = (await resolveMediaId(link)) || link;
+                    } else if (typeof link === 'string' && link.startsWith('/uploads/')) {
+                      const apiBase = getApiBaseUrl();
+                      link = `${apiBase}${link}`;
+                    }
+
+                    return {
+                      ...policy,
+                      link
+                    };
+                  }));
+
+                  const systemPolicyMap = new Map(
+                    resolvedPolicies
+                      .filter((policy: any) => policy.systemKey)
+                      .map((policy: any) => [policy.systemKey, policy])
+                  );
+
+                  const managedPolicies: any[] = [];
+
+                  ESG_POLICY_DISPLAY_CONFIGS
+                    .filter((config) => config.group === 'primary')
+                    .forEach((config) => {
+                      const policy = systemPolicyMap.get(config.systemKey);
+                      if (policy?.link) {
+                        managedPolicies.push({
+                          title: policy.title,
+                          link: policy.link,
+                          label: policy.label || policy.title
+                        });
+                      }
+                    });
+
+                  const otherPoliciesHeading = await getPolicyContent('otherPoliciesHeading') || 'Other Policies';
+                  const otherPolicies = ESG_POLICY_DISPLAY_CONFIGS
+                    .filter((config) => config.group === 'other')
+                    .map((config) => systemPolicyMap.get(config.systemKey))
+                    .filter((policy: any) => policy?.link)
+                    .map((policy: any) => ({
+                      link: policy.link,
+                      label: policy.label || policy.title
+                    }));
+
+                  if (otherPolicies.length > 0) {
+                    managedPolicies.push({
+                      title: otherPoliciesHeading,
+                      policies: otherPolicies
+                    });
+                  }
+
+                  const customPolicies = resolvedPolicies
+                    .filter((policy: any) => !policy.systemKey && policy.link)
+                    .map((policy: any) => ({
+                      title: policy.title,
+                      link: policy.link,
+                      label: policy.label || policy.title
+                    }));
+
+                  setPolicies([...managedPolicies, ...customPolicies]);
+                  return;
+                }
+              } catch (e) {
+                console.error('Error parsing managed policies:', e);
+              }
+            }
+
+            // Fallback to legacy section-content fields when the managed JSON list doesn't exist yet.
             const fixedPolicies: any[] = [];
 
-            // Quality Policy
             const qualityTitle = await getPolicyContent('qualityPolicyTitle');
             const qualityUrl = await getPolicyContent('qualityPolicyUrl');
             if (qualityTitle && qualityUrl) {
@@ -274,7 +372,6 @@ const ESGPage = () => {
               });
             }
 
-            // EHS Policy
             const ehsTitle = await getPolicyContent('ehsPolicyTitle');
             const ehsUrl = await getPolicyContent('ehsPolicyUrl');
             if (ehsTitle && ehsUrl) {
@@ -285,7 +382,6 @@ const ESGPage = () => {
               });
             }
 
-            // Sustainability Policy
             const sustainabilityTitle = await getPolicyContent('sustainabilityPolicyTitle');
             const sustainabilityUrl = await getPolicyContent('sustainabilityPolicyUrl');
             if (sustainabilityTitle && sustainabilityUrl) {
@@ -296,11 +392,9 @@ const ESGPage = () => {
               });
             }
 
-            // Other Policies group
             const otherPoliciesHeading = await getPolicyContent('otherPoliciesHeading') || 'Other Policies';
             const otherPolicies: any[] = [];
 
-            // Grievance Policy
             const grievanceTitle = await getPolicyContent('grievancePolicyTitle');
             const grievanceUrl = await getPolicyContent('grievancePolicyUrl');
             if (grievanceTitle && grievanceUrl) {
@@ -310,7 +404,6 @@ const ESGPage = () => {
               });
             }
 
-            // ABAC Policy
             const abacTitle = await getPolicyContent('abacPolicyTitle');
             const abacUrl = await getPolicyContent('abacPolicyUrl');
             if (abacTitle && abacUrl) {
@@ -320,7 +413,6 @@ const ESGPage = () => {
               });
             }
 
-            // Vendor Code
             const vendorCodeTitle = await getPolicyContent('vendorCodeTitle');
             const vendorCodeUrl = await getPolicyContent('vendorCodeUrl');
             if (vendorCodeTitle && vendorCodeUrl) {
@@ -337,43 +429,7 @@ const ESGPage = () => {
               });
             }
 
-            // Fetch dynamic policies from JSON content
-            const policiesContent = policiesSection.content.find((c: any) => c.contentKey === 'policies');
-            let dynamicPolicies: any[] = [];
-            if (policiesContent && policiesContent.contentType === 'json') {
-              try {
-                const parsed = JSON.parse(policiesContent.contentValue);
-                if (Array.isArray(parsed)) {
-                  // Transform dynamic policies to match the expected format and resolve links
-                  dynamicPolicies = await Promise.all(parsed.map(async (p: any) => {
-                    let link = p.link || p.url || '';
-
-                    // If link is a number (mediaId), resolve it
-                    if (typeof link === 'number' || (typeof link === 'string' && /^\d+$/.test(link))) {
-                      const resolvedLink = await resolveMediaId(link);
-                      link = resolvedLink || link;
-                    }
-                    // If link is a file path, resolve it with API base URL
-                    else if (typeof link === 'string' && link.startsWith('/uploads/')) {
-                      const apiBase = getApiBaseUrl();
-                      link = `${apiBase}${link}`;
-                    }
-
-                    return {
-                      title: p.title || p.label,
-                      link: link,
-                      label: p.label || p.title
-                    };
-                  }));
-                }
-              } catch (e) {
-                console.error('Error parsing dynamic policies:', e);
-              }
-            }
-
-            // Combine fixed and dynamic policies (fixed first, then dynamic)
-            const allPolicies = [...fixedPolicies, ...dynamicPolicies];
-            setPolicies(allPolicies);
+            setPolicies(fixedPolicies);
           }
 
           // Parse Core Values from Governance Section
