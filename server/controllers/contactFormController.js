@@ -4,6 +4,21 @@ const status = require('../helpers/response');
 const { getRequestMeta, phoneToDigitsOnly } = require('../helpers/requestMeta');
 const { sendToKissflowWebhook } = require('../helpers/kissflowWebhook');
 
+const AGENT_ID = '69c3c8e8509229d0a7c085dc';
+
+function splitCityAndState(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return { cityname: '', statename: '' };
+  }
+
+  const [cityname = '', ...rest] = raw.split(',');
+  return {
+    cityname: cityname.trim(),
+    statename: rest.join(',').trim(),
+  };
+}
+
 function asyncHandler(fn) {
   return (req, res, next) => {
     Promise.resolve(fn(req, res, next)).catch((e) =>
@@ -60,15 +75,19 @@ exports.submit = asyncHandler(async (req, res) => {
     const { name, email, phone, city, product, enquiringFor, message, company } = req.body;
     const phoneDigits = phoneToDigitsOnly(phone || '');
     const meta = getRequestMeta(req);
+    const { cityname, statename } = splitCityAndState(city);
 
     // Kissflow webhook: queue and send asynchronously (do not await)
     const webhookData = {
       name,
       email,
       Phone_Number: phoneDigits,
+      agentid: AGENT_ID,
       // Standard payload expects `company` to always exist
       company: company ?? '',
       ...(city && { city }),
+      ...(cityname && { cityname }),
+      ...(statename && { statename }),
       ...(product && { Product: product }),
       message,
       ...(enquiringFor && { enquiringFor }),
