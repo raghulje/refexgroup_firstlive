@@ -270,6 +270,7 @@ const ESGPage = () => {
             };
 
             const policiesContent = policiesSection.content.find((c: any) => c.contentKey === 'policies');
+            const policiesMode = policiesSection.content.find((c: any) => c.contentKey === 'policiesMode')?.contentValue;
             if (policiesContent && policiesContent.contentType === 'json') {
               try {
                 const parsed = JSON.parse(policiesContent.contentValue);
@@ -285,74 +286,77 @@ const ESGPage = () => {
                     }))
                     .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
 
-                  const activePolicies = normalizedPolicies.filter((policy: any) => policy.isActive !== false);
+                  const shouldUseManagedPolicies = normalizedPolicies.length > 0 || policiesMode === 'managed';
+                  if (shouldUseManagedPolicies) {
+                    const activePolicies = normalizedPolicies.filter((policy: any) => policy.isActive !== false);
 
-                  const resolvedPolicies = await Promise.all(activePolicies.map(async (policy: any) => {
-                    let link = policy.link || policy.url || '';
+                    const resolvedPolicies = await Promise.all(activePolicies.map(async (policy: any) => {
+                      let link = policy.link || policy.url || '';
 
-                    if ((!link || link === '') && policy.mediaId) {
-                      link = (await resolveMediaId(policy.mediaId)) || '';
-                    } else if (typeof link === 'number' || (typeof link === 'string' && /^\d+$/.test(link))) {
-                      link = (await resolveMediaId(link)) || link;
-                    } else if (typeof link === 'string' && link.startsWith('/uploads/')) {
-                      const apiBase = getApiBaseUrl();
-                      link = `${apiBase}${link}`;
+                      if ((!link || link === '') && policy.mediaId) {
+                        link = (await resolveMediaId(policy.mediaId)) || '';
+                      } else if (typeof link === 'number' || (typeof link === 'string' && /^\d+$/.test(link))) {
+                        link = (await resolveMediaId(link)) || link;
+                      } else if (typeof link === 'string' && link.startsWith('/uploads/')) {
+                        const apiBase = getApiBaseUrl();
+                        link = `${apiBase}${link}`;
+                      }
+
+                      return {
+                        ...policy,
+                        link
+                      };
+                    }));
+
+                    const systemPolicyMap = new Map(
+                      resolvedPolicies
+                        .filter((policy: any) => policy.systemKey)
+                        .map((policy: any) => [policy.systemKey, policy])
+                    );
+
+                    const managedPolicies: any[] = [];
+
+                    ESG_POLICY_DISPLAY_CONFIGS
+                      .filter((config) => config.group === 'primary')
+                      .forEach((config) => {
+                        const policy = systemPolicyMap.get(config.systemKey);
+                        if (policy?.link) {
+                          managedPolicies.push({
+                            title: policy.title,
+                            link: policy.link,
+                            label: policy.label || policy.title
+                          });
+                        }
+                      });
+
+                    const otherPoliciesHeading = await getPolicyContent('otherPoliciesHeading') || 'Other Policies';
+                    const otherPolicies = ESG_POLICY_DISPLAY_CONFIGS
+                      .filter((config) => config.group === 'other')
+                      .map((config) => systemPolicyMap.get(config.systemKey))
+                      .filter((policy: any) => policy?.link)
+                      .map((policy: any) => ({
+                        link: policy.link,
+                        label: policy.label || policy.title
+                      }));
+
+                    if (otherPolicies.length > 0) {
+                      managedPolicies.push({
+                        title: otherPoliciesHeading,
+                        policies: otherPolicies
+                      });
                     }
 
-                    return {
-                      ...policy,
-                      link
-                    };
-                  }));
+                    const customPolicies = resolvedPolicies
+                      .filter((policy: any) => !policy.systemKey && policy.link)
+                      .map((policy: any) => ({
+                        title: policy.title,
+                        link: policy.link,
+                        label: policy.label || policy.title
+                      }));
 
-                  const systemPolicyMap = new Map(
-                    resolvedPolicies
-                      .filter((policy: any) => policy.systemKey)
-                      .map((policy: any) => [policy.systemKey, policy])
-                  );
-
-                  const managedPolicies: any[] = [];
-
-                  ESG_POLICY_DISPLAY_CONFIGS
-                    .filter((config) => config.group === 'primary')
-                    .forEach((config) => {
-                      const policy = systemPolicyMap.get(config.systemKey);
-                      if (policy?.link) {
-                        managedPolicies.push({
-                          title: policy.title,
-                          link: policy.link,
-                          label: policy.label || policy.title
-                        });
-                      }
-                    });
-
-                  const otherPoliciesHeading = await getPolicyContent('otherPoliciesHeading') || 'Other Policies';
-                  const otherPolicies = ESG_POLICY_DISPLAY_CONFIGS
-                    .filter((config) => config.group === 'other')
-                    .map((config) => systemPolicyMap.get(config.systemKey))
-                    .filter((policy: any) => policy?.link)
-                    .map((policy: any) => ({
-                      link: policy.link,
-                      label: policy.label || policy.title
-                    }));
-
-                  if (otherPolicies.length > 0) {
-                    managedPolicies.push({
-                      title: otherPoliciesHeading,
-                      policies: otherPolicies
-                    });
+                    setPolicies([...managedPolicies, ...customPolicies]);
+                    return;
                   }
-
-                  const customPolicies = resolvedPolicies
-                    .filter((policy: any) => !policy.systemKey && policy.link)
-                    .map((policy: any) => ({
-                      title: policy.title,
-                      link: policy.link,
-                      label: policy.label || policy.title
-                    }));
-
-                  setPolicies([...managedPolicies, ...customPolicies]);
-                  return;
                 }
               } catch (e) {
                 console.error('Error parsing managed policies:', e);

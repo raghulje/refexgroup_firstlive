@@ -229,17 +229,21 @@ export default function ESGPage_cms({
       // Parse Policies
       const policiesSection = pageSections.find(s => s.sectionKey === 'policies');
       if (policiesSection?.content) {
+        const legacyPolicies = buildPoliciesFromSection(policiesSection);
         const policiesContent = policiesSection.content.find((c: any) => c.contentKey === 'policies');
+        const policiesMode = policiesSection.content.find((c: any) => c.contentKey === 'policiesMode')?.contentValue;
         if (policiesContent && policiesContent.contentType === 'json') {
           try {
             const parsed = JSON.parse(policiesContent.contentValue);
-            setPolicies(normalizeManagedPolicies(parsed));
+            const normalizedPolicies = normalizeManagedPolicies(parsed);
+            const shouldUseManagedPolicies = normalizedPolicies.length > 0 || policiesMode === 'managed' || legacyPolicies.length === 0;
+            setPolicies(shouldUseManagedPolicies ? normalizedPolicies : legacyPolicies);
           } catch (e) {
             console.error('Error parsing policies:', e);
-            setPolicies(buildPoliciesFromSection(policiesSection));
+            setPolicies(legacyPolicies);
           }
         } else {
-          setPolicies(buildPoliciesFromSection(policiesSection));
+          setPolicies(legacyPolicies);
         }
       }
     } catch (error) {
@@ -689,6 +693,7 @@ export default function ESGPage_cms({
     if (!esgPage?.id || !policiesSection?.content) return;
 
     const policiesContent = policiesSection.content.find((c: any) => c.contentKey === 'policies');
+    const policiesModeContent = policiesSection.content.find((c: any) => c.contentKey === 'policiesMode');
 
     try {
       setSavingPolicies(true);
@@ -705,13 +710,35 @@ export default function ESGPage_cms({
           contentValue: JSON.stringify(updatedPolicies),
           contentType: 'json'
         });
+
+        if (policiesModeContent?.id) {
+          await sectionContentService.update(policiesModeContent.id, {
+            contentValue: 'managed',
+            contentType: 'text'
+          });
+        } else {
+          await sectionContentService.bulkUpdate([{
+            sectionId: policiesSection.id,
+            contentKey: 'policiesMode',
+            contentValue: 'managed',
+            contentType: 'text'
+          }]);
+        }
       } else {
-        await sectionContentService.bulkUpdate([{
-          sectionId: policiesSection.id,
-          contentKey: 'policies',
-          contentValue: JSON.stringify(updatedPolicies),
-          contentType: 'json'
-        }]);
+        await sectionContentService.bulkUpdate([
+          {
+            sectionId: policiesSection.id,
+            contentKey: 'policies',
+            contentValue: JSON.stringify(updatedPolicies),
+            contentType: 'json'
+          },
+          {
+            sectionId: policiesSection.id,
+            contentKey: 'policiesMode',
+            contentValue: 'managed',
+            contentType: 'text'
+          }
+        ]);
       }
 
       alert('Policies order saved successfully!');
@@ -1593,12 +1620,27 @@ export default function ESGPage_cms({
                 setPolicies(updatedPolicies);
 
                 const policiesContent = policiesSection?.content?.find((c: any) => c.contentKey === 'policies');
+                const policiesModeContent = policiesSection?.content?.find((c: any) => c.contentKey === 'policiesMode');
                 if (policiesContent?.id) {
                   try {
                     await sectionContentService.update(policiesContent.id, {
                       contentValue: JSON.stringify(updatedPolicies),
                       contentType: 'json'
                     });
+
+                    if (policiesModeContent?.id) {
+                      await sectionContentService.update(policiesModeContent.id, {
+                        contentValue: 'managed',
+                        contentType: 'text'
+                      });
+                    } else {
+                      await sectionContentService.bulkUpdate([{
+                        sectionId: policiesSection.id,
+                        contentKey: 'policiesMode',
+                        contentValue: 'managed',
+                        contentType: 'text'
+                      }]);
+                    }
                     await fetchESGData();
                   } catch (error) {
                     console.error('Error deleting policy:', error);
@@ -1606,12 +1648,20 @@ export default function ESGPage_cms({
                   }
                 } else {
                   try {
-                    await sectionContentService.bulkUpdate([{
-                      sectionId: policiesSection.id,
-                      contentKey: 'policies',
-                      contentValue: JSON.stringify(updatedPolicies),
-                      contentType: 'json'
-                    }]);
+                    await sectionContentService.bulkUpdate([
+                      {
+                        sectionId: policiesSection.id,
+                        contentKey: 'policies',
+                        contentValue: JSON.stringify(updatedPolicies),
+                        contentType: 'json'
+                      },
+                      {
+                        sectionId: policiesSection.id,
+                        contentKey: 'policiesMode',
+                        contentValue: 'managed',
+                        contentType: 'text'
+                      }
+                    ]);
                     await fetchESGData();
                   } catch (error) {
                     console.error('Error deleting policy:', error);

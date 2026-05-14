@@ -1571,6 +1571,7 @@ export default function AdminDashboard() {
 
           if (entitySectionKey === 'policies') {
             const existingPoliciesContent = section.content?.find((c: any) => c.contentKey === 'policies');
+            const policiesModeContent = section.content?.find((c: any) => c.contentKey === 'policiesMode');
             let existingPolicies: any[] = [];
 
             if (existingPoliciesContent?.contentType === 'json') {
@@ -1587,7 +1588,7 @@ export default function AdminDashboard() {
                 .map((policy: any) => [policy.systemKey, policy])
             );
 
-            const hasManagedPolicies = Boolean(existingPoliciesContent?.id);
+            const hasManagedPolicies = policiesModeContent?.contentValue === 'managed';
             const managedPolicies = buildManagedEsgPoliciesFromFormData(submitData)
               .filter((policy: any) => !hasManagedPolicies || existingPolicyMap.has(policy.systemKey))
               .map((policy: any) => {
@@ -1609,13 +1610,35 @@ export default function AdminDashboard() {
                 contentValue: JSON.stringify(mergedPolicies),
                 contentType: 'json'
               });
+
+              if (policiesModeContent?.id) {
+                await sectionContentService.update(policiesModeContent.id, {
+                  contentValue: 'managed',
+                  contentType: 'text'
+                });
+              } else {
+                await sectionContentService.bulkUpdate([{
+                  sectionId: section.id,
+                  contentKey: 'policiesMode',
+                  contentValue: 'managed',
+                  contentType: 'text'
+                }]);
+              }
             } else {
-              await sectionContentService.bulkUpdate([{
-                sectionId: section.id,
-                contentKey: 'policies',
-                contentValue: JSON.stringify(mergedPolicies),
-                contentType: 'json'
-              }]);
+              await sectionContentService.bulkUpdate([
+                {
+                  sectionId: section.id,
+                  contentKey: 'policies',
+                  contentValue: JSON.stringify(mergedPolicies),
+                  contentType: 'json'
+                },
+                {
+                  sectionId: section.id,
+                  contentKey: 'policiesMode',
+                  contentValue: 'managed',
+                  contentType: 'text'
+                }
+              ]);
             }
           }
 
@@ -1808,11 +1831,15 @@ export default function AdminDashboard() {
         }
 
         const policiesContent = targetSection.content?.find((c: any) => c.contentKey === 'policies');
+        const policiesModeContent = targetSection.content?.find((c: any) => c.contentKey === 'policiesMode');
         let policies: any[] = [];
 
         if (policiesContent && policiesContent.contentType === 'json') {
           try {
-            policies = normalizeManagedEsgPolicies(JSON.parse(policiesContent.contentValue));
+            const parsedPolicies = normalizeManagedEsgPolicies(JSON.parse(policiesContent.contentValue));
+            const fallbackPolicies = buildManagedEsgPoliciesFromSection(targetSection);
+            const shouldUseManagedPolicies = parsedPolicies.length > 0 || policiesModeContent?.contentValue === 'managed' || fallbackPolicies.length === 0;
+            policies = shouldUseManagedPolicies ? parsedPolicies : fallbackPolicies;
           } catch {
             policies = buildManagedEsgPoliciesFromSection(targetSection);
           }
@@ -1874,13 +1901,35 @@ export default function AdminDashboard() {
             contentValue: JSON.stringify(policies),
             contentType: 'json'
           });
+
+          if (policiesModeContent?.id) {
+            await sectionContentService.update(policiesModeContent.id, {
+              contentValue: 'managed',
+              contentType: 'text'
+            });
+          } else {
+            await sectionContentService.bulkUpdate([{
+              sectionId: targetSection.id,
+              contentKey: 'policiesMode',
+              contentValue: 'managed',
+              contentType: 'text'
+            }]);
+          }
         } else {
-          await sectionContentService.bulkUpdate([{
-            sectionId: targetSection.id,
-            contentKey: 'policies',
-            contentValue: JSON.stringify(policies),
-            contentType: 'json'
-          }]);
+          await sectionContentService.bulkUpdate([
+            {
+              sectionId: targetSection.id,
+              contentKey: 'policies',
+              contentValue: JSON.stringify(policies),
+              contentType: 'json'
+            },
+            {
+              sectionId: targetSection.id,
+              contentKey: 'policiesMode',
+              contentValue: 'managed',
+              contentType: 'text'
+            }
+          ]);
         }
 
         window.dispatchEvent(new Event('cms-refresh'));
