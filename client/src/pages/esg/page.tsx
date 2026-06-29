@@ -528,12 +528,12 @@ const ESGPage = () => {
           return (
             <section className="py-8 md:py-10">
               <div className="container mx-auto px-4 lg:px-24 max-w-8xl">
-                <div className="grid md:grid-cols-2 gap-8 items-center">
-                  <div data-aos="fade-right" data-aos-duration="800" data-aos-easing="ease-out-cubic">
+                <div className="grid md:grid-cols-[70%_30%] gap-6 items-stretch">
+                  <div className="overflow-hidden rounded-lg" data-aos="fade-right" data-aos-duration="800" data-aos-easing="ease-out-cubic">
                     <img
                       src={introImagePath}
                       alt="ESG"
-                      className="w-full h-auto rounded-lg"
+                      className="w-full h-full min-h-[280px] md:min-h-[400px] object-cover object-center rounded-lg"
                     />
                   </div>
                   <div data-aos="fade-left" data-aos-duration="800" data-aos-delay="200" data-aos-easing="ease-out-cubic">

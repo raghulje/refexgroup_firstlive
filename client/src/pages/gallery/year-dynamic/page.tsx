@@ -92,14 +92,63 @@ const DynamicGalleryYearPage = ({ year: propYear }: { year?: string }) => {
             return event?.slug === selectedEvent;
         });
 
-    // Refresh AOS when images change (avoid expensive refresh on scroll/resize)
+    // Refresh AOS when images change - with delay to ensure DOM is updated
     useEffect(() => {
         if (filteredImages.length === 0) return;
-        const timer = setTimeout(() => {
+        
+        // Use multiple timeouts to ensure DOM is fully updated and images are loaded
+        const timers: NodeJS.Timeout[] = [];
+        
+        // Function to check if element is in viewport and make it visible
+        const checkAndShowElements = () => {
+            const elements = document.querySelectorAll('.gallery-image-container[data-aos]');
+            elements.forEach((el) => {
+                const rect = el.getBoundingClientRect();
+                const isInViewport = rect.top < window.innerHeight && rect.bottom > 0;
+                if (isInViewport && !el.classList.contains('aos-animate')) {
+                    // Element is in viewport but not animated yet - make it visible
+                    (el as HTMLElement).style.opacity = '1';
+                    (el as HTMLElement).style.visibility = 'visible';
+                    (el as HTMLElement).style.transform = 'none';
+                }
+            });
+        };
+        
+        // First refresh after DOM update
+        timers.push(setTimeout(() => {
+            checkAndShowElements();
             AOS.refresh();
-        }, 150);
-        return () => clearTimeout(timer);
-    }, [filteredImages.length, selectedEvent]);
+        }, 50));
+        
+        // Second refresh after images might have loaded
+        timers.push(setTimeout(() => {
+            checkAndShowElements();
+            AOS.refresh();
+            // Force trigger scroll event to detect elements in viewport
+            window.dispatchEvent(new Event('scroll'));
+        }, 200));
+        
+        // Third refresh to catch any late-loading images
+        timers.push(setTimeout(() => {
+            checkAndShowElements();
+            AOS.refresh();
+        }, 500));
+        
+        // Also check on scroll/resize
+        const handleScroll = () => {
+            checkAndShowElements();
+            AOS.refresh();
+        };
+        
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('resize', handleScroll, { passive: true });
+        
+        return () => {
+            timers.forEach(timer => clearTimeout(timer));
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleScroll);
+        };
+    }, [images, selectedEvent, filteredImages]);
 
     // Handle event selection with smooth scrolling
     const handleEventSelect = (eventSlug: string) => {
@@ -516,8 +565,6 @@ const DynamicGalleryYearPage = ({ year: propYear }: { year?: string }) => {
                                 src={heroBgImage}
                                 alt={`Gallery ${album.name}`}
                                 className="w-full h-full object-cover"
-                                loading="lazy"
-                                decoding="async"
                                 onError={(e) => {
                                     // Fallback to gradient if image fails to load
                                     (e.target as HTMLImageElement).style.display = 'none';
@@ -610,8 +657,6 @@ const DynamicGalleryYearPage = ({ year: propYear }: { year?: string }) => {
                                             src={imageUrl}
                                             alt={image.caption || image.title || `Gallery image ${index + 1}`}
                                                 className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out"
-                                            loading="lazy"
-                                            decoding="async"
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).style.display = 'none';
                                             }}
@@ -728,8 +773,6 @@ const DynamicGalleryYearPage = ({ year: propYear }: { year?: string }) => {
                             src={resolveImageUrl(filteredImages[selectedImage])}
                             alt={filteredImages[selectedImage].caption || filteredImages[selectedImage].title || 'Gallery image'}
                             className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-                            loading="eager"
-                            decoding="async"
                             onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = 'none';
                             }}
@@ -778,8 +821,6 @@ const DynamicGalleryYearPage = ({ year: propYear }: { year?: string }) => {
                                         src={thumbUrl}
                                         alt={`Thumbnail ${idx + 1}`}
                                         className="w-full h-full object-cover"
-                                        loading="lazy"
-                                        decoding="async"
                                     />
                                     {isActive && (
                                         <div className="absolute inset-0 bg-white/20"></div>

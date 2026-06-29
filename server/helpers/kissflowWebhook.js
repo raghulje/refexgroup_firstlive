@@ -10,7 +10,6 @@ const crypto = require('crypto');
 const KISSFLOW_WEBHOOK_URL = 'https://refexgroup.kissflow.com/integration/2/AcCMptlq60zH/webhook/F51DqkQt8HoYqlSALpUWU8-uPOXxdSINKjZmtzXphM6Ujk-hJLw6lgZBW8NrIyyvXSmmZS9MwwaWdTmahBLNxQ';
 
 const QUEUE_DELAY_MS = 3500; // 3–4 seconds between requests
-const WEBSITE_SLUG = 'refexgroup';
 
 const queue = [];
 let isProcessing = false;
@@ -23,12 +22,22 @@ function randomString() {
   return crypto.randomBytes(6).toString('hex');
 }
 
+function getWebsiteSlug(websiteName) {
+  if (!websiteName || typeof websiteName !== 'string') return 'refexgroup';
+  return websiteName
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[^a-z0-9]/g, '') || 'refexgroup';
+}
+
 /**
  * Generate unique submission ID: websiteSlug-Date.now()-random
+ * @param {string} [websiteName]
  * @returns {string}
  */
-function generateSubmissionId() {
-  return `${WEBSITE_SLUG}-${Date.now()}-${randomString()}`;
+function generateSubmissionId(websiteName) {
+  const slug = getWebsiteSlug(websiteName);
+  return `${slug}-${Date.now()}-${randomString()}`;
 }
 
 /**
@@ -97,7 +106,7 @@ async function processQueue() {
   }
 
   const { websiteName, formName, formData } = item;
-  const submissionId = generateSubmissionId();
+  const submissionId = generateSubmissionId(websiteName);
   const websiteAndForm = `${websiteName} - ${formName}`;
 
   const payload = {

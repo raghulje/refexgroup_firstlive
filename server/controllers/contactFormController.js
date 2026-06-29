@@ -3,6 +3,7 @@ const emailService = require('../services/emailService');
 const status = require('../helpers/response');
 const { getRequestMeta, phoneToDigitsOnly } = require('../helpers/requestMeta');
 const { sendToKissflowWebhook } = require('../helpers/kissflowWebhook');
+const { resolveWebsiteNameFromProduct } = require('../helpers/kissflowWebsiteName');
 
 const AGENT_ID = '69c3c8e8509229d0a7c085dc';
 
@@ -93,7 +94,13 @@ exports.submit = asyncHandler(async (req, res) => {
       ...(enquiringFor && { enquiringFor }),
       ...meta
     };
-    sendToKissflowWebhook('Refex Group', 'Contact form', webhookData);
+    const kissflowWebsiteName = resolveWebsiteNameFromProduct(product);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(
+        `[Kissflow] Refex Group contact: product="${product || ''}" → websiteName="${kissflowWebsiteName}"`
+      );
+    }
+    sendToKissflowWebhook(kissflowWebsiteName, 'Contact form', webhookData);
 
     // Send email in background (best-effort), so API response is not blocked by SMTP delays.
     setImmediate(async () => {

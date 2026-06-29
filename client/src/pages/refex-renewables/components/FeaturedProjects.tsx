@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import { getApiBaseUrl } from '../../../config/env';
 
 interface FeaturedProjectsProps {
@@ -18,7 +17,6 @@ export default function FeaturedProjects({ section, projects = [], getImagePath 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const navigate = useNavigate();
 
   // Handle keyboard navigation and body scroll lock
   useEffect(() => {
@@ -343,19 +341,12 @@ export default function FeaturedProjects({ section, projects = [], getImagePath 
               <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
                 {/* Navigation Links (hidden on mobile) */}
                 <div className="hidden md:flex items-center gap-6 text-white text-sm">
-                  <Link to="/" className="hover:text-[#ff6b35] transition-colors">Home</Link>
-                  <Link to="/about-refex" className="hover:text-[#ff6b35] transition-colors">About Refex</Link>
-                  <Link to="/business" className="hover:text-[#ff6b35] transition-colors">Business</Link>
-                  <Link to="/investments" className="hover:text-[#ff6b35] transition-colors">Investments</Link>
-                  <Link to="/esg" className="hover:text-[#ff6b35] transition-colors">ESG</Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLightboxOpen(false);
-                      navigate('/contact');
-                    }}
-                    className="px-4 py-2 bg-[#2a2a2a] text-white rounded hover:bg-[#3a3a3a] transition-colors"
-                  >
+                  <a href="/" className="hover:text-[#ff6b35] transition-colors">Home</a>
+                  <a href="/about-refex" className="hover:text-[#ff6b35] transition-colors">About Refex</a>
+                  <a href="/business" className="hover:text-[#ff6b35] transition-colors">Business</a>
+                  <a href="/investments" className="hover:text-[#ff6b35] transition-colors">Investments</a>
+                  <a href="/esg" className="hover:text-[#ff6b35] transition-colors">ESG</a>
+                  <button className="px-4 py-2 bg-[#2a2a2a] text-white rounded hover:bg-[#3a3a3a] transition-colors">
                     Get in touch
                   </button>
                 </div>

@@ -129,6 +129,16 @@ const REFEX_MEDTECH_PRODUCTS = dedupeProducts([
   'Dream Series-Ceiling Suspended',
 ]);
 
+/** Refex Mobility services on Refex Group contact form */
+const REFEX_MOBILITY_PRODUCTS = [
+  'Employee Transfers',
+  'Airport Transfers',
+  'Sopt Rental',
+  'Outstation Rides',
+  'Business Travel',
+  'All Services',
+] as const;
+
 const TOP_CITY_OPTIONS = [
   'Mumbai, Maharashtra',
   'Delhi, Delhi',
@@ -743,6 +753,19 @@ export default function ContactPage() {
                                 {activeProductSection === 'Refex MedTech' ? (
                                   <div className="flex flex-wrap gap-2">
                                     {REFEX_MEDTECH_PRODUCTS.map((p) => (
+                                      <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => selectProductAndClose(p)}
+                                        className="px-3 py-2 rounded-full border border-gray-300 text-sm hover:bg-gray-900 hover:text-white hover:border-gray-900 transition text-left"
+                                      >
+                                        {p}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : activeProductSection === 'Refex Mobility' ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {REFEX_MOBILITY_PRODUCTS.map((p) => (
                                       <button
                                         key={p}
                                         type="button"
