@@ -615,7 +615,7 @@ export default function LeadershipSection() {
                 <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
                   {selectedLeader.name}
                 </h3>
-                <p className="text-gray-500 text-lg mb-3 font-medium">
+                <p className="text-gray-500 text-lg mb-3 font-medium whitespace-pre-line">
                   {selectedLeader.title}
                 </p>
 

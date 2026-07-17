@@ -30,10 +30,13 @@ export const LeaderForm = ({
       <FormField
         label="Position"
         name="position"
+        type="textarea"
+        rows={2}
         value={formData.position}
         onChange={(value) => handleInputChange('position', value)}
         required
         error={errors.position}
+        helpText="Press Enter to start a new line (e.g. first line: role title, second line: business unit)."
       />
       
       <FormField

@@ -82,7 +82,7 @@ const ProfileCard = ({
       </h3>
 
       {/* Title */}
-      <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500">
+      <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500 whitespace-pre-line">
         {title}
       </p>
 

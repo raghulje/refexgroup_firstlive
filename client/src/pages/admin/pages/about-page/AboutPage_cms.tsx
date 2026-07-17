@@ -726,7 +726,7 @@ export default function AboutPage_cms({
                             <span className="font-medium text-gray-900">{leader.name || 'N/A'}</span>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
-                            <span className="text-gray-600">{leader.position || 'N/A'}</span>
+                            <span className="text-gray-600 whitespace-pre-line">{leader.position || 'N/A'}</span>
                           </td>
                           <td className="px-4 py-4">
                             <span className="text-gray-600 text-sm max-w-xs truncate block">
