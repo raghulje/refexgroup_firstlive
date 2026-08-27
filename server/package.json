@@ -49,7 +49,8 @@
     "setup-media": "node scripts/download_images.js && node scripts/create_media_from_downloads.js",
     "migrate:draft-publish": "node scripts/add_draft_publish_fields.js",
     "migrate:email-settings": "node scripts/add_email_settings_columns.js",
-    "test-api": "node scripts/test_api.js"
+    "test-api": "node scripts/test_api.js",
+    "test:spam": "node scripts/test_spam_protection.js"
   },
   "author": "",
   "license": "ISC",

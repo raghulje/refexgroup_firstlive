@@ -1,6 +1,10 @@
 const { FormSubmission, EmailSettings } = require('../models');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const {
+  evaluateContactSubmission,
+  recordSuccessfulSubmission,
+} = require('../helpers/spamProtection');
 
 // Helper function to create transporter
 async function createTransporter() {
@@ -535,6 +539,20 @@ exports.submitContactForm = async (req, res) => {
       return res.status(400).json({ error: 'Email and message are required' });
     }
 
+    const spamCheck = evaluateContactSubmission({
+      fields: req.body,
+      email,
+      phone,
+      endpoint: 'form-submissions/contact-form',
+    });
+
+    if (spamCheck.blocked) {
+      return res.json({
+        success: true,
+        message: 'Contact form submitted successfully',
+      });
+    }
+
     // Get IP address
     const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const userAgent = req.headers['user-agent'];
@@ -588,6 +606,8 @@ exports.submitContactForm = async (req, res) => {
       console.error('Failed to send confirmation email:', err);
       // Don't fail the request if confirmation email fails
     });
+
+    recordSuccessfulSubmission(email);
 
     res.json({
       success: true,

@@ -78,6 +78,7 @@ app.use("/api/v1/footer", require("./routes/footer"));
 app.use("/api/v1/social-links", require("./routes/socialLinks"));
 app.use("/api/v1/contact-info", require("./routes/contactInfo"));
 app.use("/api/v1/contact-form", require("./routes/contactForm"));
+app.use("/api", require("./routes/enquiry"));
 app.use("/api/v1/global-settings", require("./routes/globalSettings"));
 app.use("/api/v1/media", require("./routes/media"));
 app.use("/api/v1/cms", require("./routes/cms"));
