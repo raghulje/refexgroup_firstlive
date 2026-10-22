@@ -3,6 +3,7 @@ import { DataTable } from '../../shared/DataTable';
 import { getAssetPath } from '../../shared/utils';
 import type { CMSComponentProps } from '../../shared/types';
 import { pagesService, sectionsService, heroSlidesService, businessCardsService, awardsService, homeVideoSectionService, homeAboutSectionService, homeCareersSectionService, homeCTASectionService, newsroomService } from '../../../../services/apiService';
+import { toYouTubeEmbedUrl } from '../../../../utils/youtube';
 
 // Helper function to extract image path from various data structures
 const getImagePath = (item: any, fieldName: string = 'image'): string => {
@@ -1354,7 +1355,7 @@ export default function HomePage_cms({
                     <p className="text-sm text-gray-500 font-medium uppercase mb-1">Title</p>
                     <p className="text-gray-900 font-medium text-lg mb-4">{videoSection.title || '-'}</p>
                     <p className="text-sm text-gray-500 font-medium uppercase mb-1">Description</p>
-                    <p className="text-gray-900 mb-4 text-sm leading-relaxed">{videoSection.description || '-'}</p>
+                    <p className="text-gray-900 mb-4 text-sm leading-relaxed whitespace-pre-line">{videoSection.description || '-'}</p>
                     <p className="text-sm text-gray-500 font-medium uppercase mb-1">Video URL</p>
                     <div className="bg-gray-100 p-3 rounded text-sm text-gray-700 break-all mb-4">
                       {videoSection.videoUrl || 'No video URL set'}
@@ -1364,7 +1365,7 @@ export default function HomePage_cms({
                         <p className="text-sm text-gray-500 font-medium uppercase mb-2">Video Preview</p>
                         <div className="aspect-video bg-gray-100 rounded border border-gray-200 overflow-hidden">
                           <iframe
-                            src={videoSection.videoUrl}
+                            src={toYouTubeEmbedUrl(videoSection.videoUrl)}
                             className="w-full h-full"
                             frameBorder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

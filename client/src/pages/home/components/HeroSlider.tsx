@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { heroSlidesService, pagesService } from '../../../services/apiService';
+import { heroSlidesService, homeVideoSectionService, pagesService } from '../../../services/apiService';
 import { resolveImageUrl } from '../../../config/env';
+import { parseHomeVideoCard, toYouTubeEmbedUrl } from '../../../utils/youtube';
 
 // No fallback slides - all must come from CMS
 const fallbackSlides: Slide[] = [];
@@ -23,12 +24,37 @@ export default function HeroSlider() {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [videoCard, setVideoCard] = useState({
+    heading: 'Celebrating',
+    accent: '23 years of Excellence',
+    body: "Refex's journey of excellence began over two decades ago, built on a foundation of learning, resilience, and agility. From Refrigerant Gases to Ash Utilization & Coal Handling, Renewables, MedTech, Mobility, and Pharmaceuticals, we've continually expanded our horizons.",
+    embedUrl: '',
+    title: 'Refex Group Video',
+    isActive: true,
+  });
 
   useEffect(() => {
     const fetchSlides = async () => {
       try {
         setLoading(true);
         setError(null);
+
+        try {
+          const videoSection = await homeVideoSectionService.get();
+          if (videoSection) {
+            const copy = parseHomeVideoCard(videoSection.title || '', videoSection.description || '');
+            setVideoCard({
+              heading: copy.heading || 'Celebrating',
+              accent: copy.accent,
+              body: copy.body,
+              embedUrl: toYouTubeEmbedUrl(videoSection.videoUrl || ''),
+              title: videoSection.title || 'Refex Group Video',
+              isActive: videoSection.isActive !== false,
+            });
+          }
+        } catch (videoError) {
+          console.error('Error fetching home video section:', videoError);
+        }
 
         // Get home page
         const homePage = await pagesService.getBySlug('home');
@@ -137,7 +163,12 @@ export default function HeroSlider() {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
 
+  const videoEmbedUrl = videoCard.embedUrl || (slides[0]?.videoId
+    ? `https://www.youtube.com/embed/${slides[0].videoId}`
+    : '');
+
   const openVideoModal = () => {
+    if (!videoEmbedUrl) return;
     setShowVideoModal(true);
   };
 
@@ -218,6 +249,7 @@ export default function HeroSlider() {
                   </div>
 
                   {/* Right: Floating Video Card (Desktop only - hidden on mobile) */}
+                  {videoCard.isActive && (
                   <div className="hidden lg:flex justify-end items-center">
                     <div className="relative bg-[#1a1a1a] rounded-3xl overflow-hidden shadow-2xl w-full max-w-sm p-6 animate-float">
                       {/* Play Button - Top Left */}
@@ -232,15 +264,23 @@ export default function HeroSlider() {
                       {/* Content Inside Card */}
                       <div className="pt-20 text-white space-y-3">
                         <h3 className="text-2xl font-bold leading-tight">
-                          Celebrating<br />
-                          <span className="text-[#7DC144]">23 years of Excellence</span>
+                          {videoCard.heading}
+                          {videoCard.accent && (
+                            <>
+                              <br />
+                              <span className="text-[#7DC144]">{videoCard.accent}</span>
+                            </>
+                          )}
                         </h3>
-                        <p className="text-base leading-relaxed text-gray-300">
-                          Refex's journey of excellence began over two decades ago, built on a foundation of learning, resilience, and agility. From Refrigerant Gases to Ash Utilization & Coal Handling, Renewables, MedTech, Mobility, and Pharmaceuticals, we've continually expanded our horizons.
-                        </p>
+                        {videoCard.body && (
+                          <p className="text-base leading-relaxed text-gray-300">
+                            {videoCard.body}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -283,6 +323,7 @@ export default function HeroSlider() {
       </div>
 
       {/* Mobile: Video Card Below Hero Section */}
+      {videoCard.isActive && (
       <div className="lg:hidden w-full py-8 sm:py-10">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="relative bg-[#1a1a1a] rounded-3xl overflow-hidden shadow-2xl w-full p-5 sm:p-6">
@@ -298,16 +339,24 @@ export default function HeroSlider() {
             {/* Content Inside Card */}
             <div className="pt-16 sm:pt-20 text-white space-y-3">
               <h3 className="text-lg sm:text-xl md:text-2xl font-bold leading-tight">
-                Celebrating<br />
-                <span className="text-[#7DC144]">23 years of Excellence</span>
+                {videoCard.heading}
+                {videoCard.accent && (
+                  <>
+                    <br />
+                    <span className="text-[#7DC144]">{videoCard.accent}</span>
+                  </>
+                )}
               </h3>
-              <p className="text-base leading-relaxed text-gray-300">
-                Refex's journey of excellence began over two decades ago, built on a foundation of learning, resilience, and agility. From Refrigerant Gases to Ash Utilization & Coal Handling, Renewables, MedTech, Mobility, and Pharmaceuticals, we've continually expanded our horizons.
-              </p>
+              {videoCard.body && (
+                <p className="text-base leading-relaxed text-gray-300">
+                  {videoCard.body}
+                </p>
+              )}
             </div>
           </div>
         </div>
       </div>
+      )}
 
       {/* Video Modal */}
       {showVideoModal && (
@@ -327,11 +376,11 @@ export default function HeroSlider() {
             >
               <i className="ri-close-line text-2xl"></i>
             </button>
-            {slides[0]?.videoId && (
+            {videoEmbedUrl && (
               <iframe
                 className="w-full h-full rounded-2xl"
-                src={`https://www.youtube.com/embed/${slides[0].videoId}?autoplay=1`}
-                title="Refex Group Video"
+                src={`${videoEmbedUrl}${videoEmbedUrl.includes('?') ? '&' : '?'}autoplay=1`}
+                title={videoCard.title || 'Refex Group Video'}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               ></iframe>

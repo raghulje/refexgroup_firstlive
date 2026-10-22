@@ -34,7 +34,7 @@ export const HomeVideoSectionForm = ({
                     onChange={(value) => handleInputChange('videoUrl', value)}
                     required
                     error={errors.videoUrl}
-                    helpText="YouTube embed URL (e.g., https://www.youtube.com/embed/xxxxx)"
+                    helpText="Paste a YouTube link. Share links (youtu.be/...), watch links, and embed links all work."
                 />
             </div>
 
@@ -48,6 +48,7 @@ export const HomeVideoSectionForm = ({
                         type="textarea"
                         error={errors.description}
                         rows={6}
+                        helpText="Shown on the homepage video card. First line is the heading, second line is the green highlight, and the rest is the paragraph."
                     />
                 </div>
 
