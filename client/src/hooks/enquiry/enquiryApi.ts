@@ -26,7 +26,10 @@ async function postJson<T>(url: string, payload: unknown): Promise<T> {
 }
 
 export async function checkEnquiry(payload: { name?: string; email: string; phone: string }) {
-  return await postJson<CheckEnquiryResponse>('/api/check-enquiry', payload);
+  const body = await postJson<CheckEnquiryResponse & { data?: CheckEnquiryResponse }>('/api/check-enquiry', payload);
+  if (typeof body?.exists === 'boolean') return body;
+  if (body?.data && typeof body.data.exists === 'boolean') return body.data;
+  return { exists: false };
 }
 
 export async function createEnquiry(payload: Record<string, unknown>) {

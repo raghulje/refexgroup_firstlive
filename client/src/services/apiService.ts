@@ -933,9 +933,7 @@ export const emailSettingsService = {
 // Form Submissions Service
 export const formSubmissionsService = {
     submitCareerApplication: async (formData: FormData): Promise<any> => {
-        const response = await api.post('/form-submissions/career-application', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const response = await api.post('/form-submissions/career-application', formData);
         return response.data;
     },
     submitContactForm: async (formData: any): Promise<any> => {

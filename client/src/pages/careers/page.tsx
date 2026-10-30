@@ -16,7 +16,7 @@ import 'react-phone-input-2/lib/style.css';
 import { useCooldownTimer } from '../../hooks/enquiry/useCooldownTimer';
 import { useEmailValidation } from '../../hooks/enquiry/useEmailValidation';
 import { usePhoneValidation } from '../../hooks/enquiry/usePhoneValidation';
-import { checkEnquiry, createEnquiry, HttpError } from '../../hooks/enquiry/enquiryApi';
+import { checkEnquiry, createEnquiry } from '../../hooks/enquiry/enquiryApi';
 
 // Import images from esops folder
 const careers1 = new URL('./esops/careers1.png', import.meta.url).href;
@@ -47,7 +47,7 @@ export default function CareersPage() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'firstName' | 'lastName' | 'email' | 'phone', string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'firstName' | 'lastName' | 'email' | 'phone' | 'message', string>>>({});
   const { isCoolingDown, secondsLeft, startCooldown } = useCooldownTimer(10);
 
   const emailValidation = useEmailValidation(formData.email, true);
@@ -383,7 +383,7 @@ export default function CareersPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (fieldErrors[name as 'firstName' | 'lastName' | 'email' | 'phone']) {
+    if (fieldErrors[name as 'firstName' | 'lastName' | 'email' | 'phone' | 'message']) {
       setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
@@ -423,6 +423,7 @@ export default function CareersPage() {
       if (emailErr) nextErrors.email = emailErr;
       const phoneErr = phoneValidation.validate();
       if (phoneErr) nextErrors.phone = phoneErr;
+      if (formData.message.trim().length < 10) nextErrors.message = 'Message must be at least 10 characters';
       if (Object.keys(nextErrors).length) {
         setFieldErrors(nextErrors);
         setSubmitMessage({ type: 'error', text: 'Please fill in all required fields' });
@@ -430,7 +431,7 @@ export default function CareersPage() {
         return;
       }
 
-      // Duplicate check (skip if endpoint not present)
+      // Duplicate check is optional. A failure here must not block the application.
       try {
         const dup = await checkEnquiry({
           name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
@@ -451,23 +452,12 @@ export default function CareersPage() {
           return;
         }
       } catch (err) {
-        if (!(err instanceof HttpError && err.status === 404)) throw err;
+        console.error('Career duplicate check failed:', err);
       }
 
-      // Optional create-enquiry record (no file upload)
-      try {
-        await createEnquiry({
-          name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
-          email: formData.email.trim(),
-          phone: formData.phone.trim(),
-          message: formData.message,
-          source: 'refexgroup-careers',
-        });
-      } catch (err) {
-        if (!(err instanceof HttpError && err.status === 404)) throw err;
-      }
-
-      // Create FormData for file upload
+      // The careers message is optional. Save the application first.
+      // The contact enquiry endpoint requires a 10 character message, so it
+      // cannot be a gate for this form.
       const submitData = new FormData();
       submitData.append('firstName', formData.firstName);
       submitData.append('lastName', formData.lastName);
@@ -478,8 +468,23 @@ export default function CareersPage() {
         submitData.append('resume', resumeFile);
       }
 
-      // Submit to API
       await formSubmissionsService.submitCareerApplication(submitData);
+
+      const enquiryMessage = formData.message.trim().length >= 10
+        ? formData.message.trim()
+        : `Career application from ${formData.firstName.trim()} ${formData.lastName.trim()}.`;
+
+      try {
+        await createEnquiry({
+          name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          message: enquiryMessage,
+          source: 'refexgroup-careers',
+        });
+      } catch (err) {
+        console.error('Career enquiry sync failed:', err);
+      }
 
       // Success
       setSubmitMessage({ type: 'success', text: 'Application submitted successfully! We will get back to you soon.' });
@@ -1068,10 +1073,11 @@ export default function CareersPage() {
                         name="message"
                         value={formData.message}
                         onChange={handleInputChange}
-                        placeholder="Let us know what you need."
+                        placeholder="Enter a message of at least 10 characters."
                         rows={4}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent resize-none"
                       ></textarea>
+                      {fieldErrors.message && <p className="text-xs text-red-500 mt-1">{fieldErrors.message}</p>}
                       <button
                         type="submit"
                         disabled={submitting || isCoolingDown}

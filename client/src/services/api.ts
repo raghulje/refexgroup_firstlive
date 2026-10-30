@@ -83,6 +83,17 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // Let the browser set the multipart boundary. A bare
+        // "multipart/form-data" header makes the server reject the upload.
+        if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+            const headers = config.headers as { delete?: (name: string) => void } | undefined;
+            if (headers && typeof headers.delete === 'function') {
+                headers.delete('Content-Type');
+            } else if (config.headers) {
+                delete (config.headers as Record<string, unknown>)['Content-Type'];
+            }
+        }
         
         if (isDev) {
             console.log('📡 Making request to:', (config.baseURL || '') + (config.url || ''));
