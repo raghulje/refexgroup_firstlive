@@ -47,11 +47,11 @@ export default function CareersPage() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'firstName' | 'lastName' | 'email' | 'phone' | 'message', string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'firstName' | 'lastName' | 'email' | 'phone' | 'message' | 'resume', string>>>({});
   const { isCoolingDown, secondsLeft, startCooldown } = useCooldownTimer(10);
 
   const emailValidation = useEmailValidation(formData.email, true);
-  const phoneValidation = usePhoneValidation(formData.phone, false);
+  const phoneValidation = usePhoneValidation(formData.phone, true);
 
   // Helper function to get image path from CMS data
   const getImagePath = (imageData: any): string => {
@@ -404,6 +404,7 @@ export default function CareersPage() {
       }
       setResumeFile(file);
       setSubmitMessage(null);
+      setFieldErrors((prev) => ({ ...prev, resume: undefined }));
     }
   };
 
@@ -424,6 +425,7 @@ export default function CareersPage() {
       const phoneErr = phoneValidation.validate();
       if (phoneErr) nextErrors.phone = phoneErr;
       if (formData.message.trim().length < 10) nextErrors.message = 'Message must be at least 10 characters';
+      if (!resumeFile) nextErrors.resume = 'Please upload your CV';
       if (Object.keys(nextErrors).length) {
         setFieldErrors(nextErrors);
         setSubmitMessage({ type: 'error', text: 'Please fill in all required fields' });
@@ -1005,78 +1007,102 @@ export default function CareersPage() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <input
-                            type="text"
-                            name="firstName"
-                            value={formData.firstName}
-                            onChange={handleInputChange}
-                            placeholder="e.g., John"
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
-                          />
+                          <div className="relative">
+                            <input
+                              type="text"
+                              name="firstName"
+                              value={formData.firstName}
+                              onChange={handleInputChange}
+                              placeholder="e.g., John"
+                              required
+                              aria-required="true"
+                              className="w-full px-4 py-3 pr-8 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
+                            />
+                            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-red-500 font-semibold" aria-hidden="true">*</span>
+                          </div>
                           {fieldErrors.firstName && <p className="text-xs text-red-500 mt-1">{fieldErrors.firstName}</p>}
                         </div>
                         <div>
-                          <input
-                            type="text"
-                            name="lastName"
-                            value={formData.lastName}
-                            onChange={handleInputChange}
-                            placeholder="e.g., Doe"
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
-                          />
+                          <div className="relative">
+                            <input
+                              type="text"
+                              name="lastName"
+                              value={formData.lastName}
+                              onChange={handleInputChange}
+                              placeholder="e.g., Doe"
+                              required
+                              aria-required="true"
+                              className="w-full px-4 py-3 pr-8 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
+                            />
+                            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-red-500 font-semibold" aria-hidden="true">*</span>
+                          </div>
                           {fieldErrors.lastName && <p className="text-xs text-red-500 mt-1">{fieldErrors.lastName}</p>}
                         </div>
                       </div>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="name@company.com"
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
-                      />
+                      <div className="relative">
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          placeholder="name@company.com"
+                          required
+                          aria-required="true"
+                          className="w-full px-4 py-3 pr-8 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent"
+                        />
+                        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-red-500 font-semibold" aria-hidden="true">*</span>
+                      </div>
                       {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
-                      <div className="w-full px-4 py-2 border border-gray-300 rounded-full focus-within:ring-2 focus-within:ring-[#50b848] focus-within:border-transparent">
+                      <div className="relative w-full px-4 py-2 pr-8 border border-gray-300 rounded-full focus-within:ring-2 focus-within:ring-[#50b848] focus-within:border-transparent">
                         <PhoneInput
                           country="in"
                           value={formData.phone.replace(/^\+/, '')}
-                          onChange={(value) =>
+                          onChange={(value) => {
                             setFormData((prev) => ({
                               ...prev,
                               phone: value ? `+${value}` : '',
-                            }))
-                          }
-                          inputProps={{ name: 'phone', autoComplete: 'tel' }}
+                            }));
+                            if (fieldErrors.phone) {
+                              setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                            }
+                          }}
+                          inputProps={{ name: 'phone', autoComplete: 'tel', required: true, 'aria-required': true }}
                           containerClass="w-full"
                           inputClass="!w-full !border-0 !shadow-none focus:!outline-none !rounded-full"
                           buttonClass="!bg-transparent !border-0"
                           placeholder="Enter phone number"
                         />
+                        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-red-500 font-semibold" aria-hidden="true">*</span>
                       </div>
                       {fieldErrors.phone && <p className="text-xs text-red-500 mt-1">{fieldErrors.phone}</p>}
                       <div>
                         <label className="block text-sm text-gray-700 mb-2">
-                          Upload your CV here {resumeFile && <span className="text-green-600">✓ {resumeFile.name}</span>}
+                          Upload your CV here <span className="text-red-500">*</span> {resumeFile && <span className="text-green-600">✓ {resumeFile.name}</span>}
                         </label>
                         <input
                           type="file"
                           accept=".pdf,.doc,.docx"
                           onChange={handleFileChange}
+                          required
+                          aria-required="true"
                           className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#50b848] file:text-white hover:file:bg-[#45a03d] file:cursor-pointer"
                         />
                         <p className="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX (Max 5MB)</p>
+                        {fieldErrors.resume && <p className="text-xs text-red-500 mt-1">{fieldErrors.resume}</p>}
                       </div>
-                      <textarea
-                        name="message"
-                        value={formData.message}
-                        onChange={handleInputChange}
-                        placeholder="Enter a message of at least 10 characters."
-                        rows={4}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent resize-none"
-                      ></textarea>
+                      <div className="relative">
+                        <textarea
+                          name="message"
+                          value={formData.message}
+                          onChange={handleInputChange}
+                          placeholder="Enter a message of at least 10 characters."
+                          rows={4}
+                          required
+                          aria-required="true"
+                          className="w-full px-4 py-3 pr-8 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#50b848] focus:border-transparent resize-none"
+                        ></textarea>
+                        <span className="pointer-events-none absolute right-4 top-3 text-red-500 font-semibold" aria-hidden="true">*</span>
+                      </div>
                       {fieldErrors.message && <p className="text-xs text-red-500 mt-1">{fieldErrors.message}</p>}
                       <button
                         type="submit"
